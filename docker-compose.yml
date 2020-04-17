@@ -1,0 +1,14 @@
+version: "3.6"
+services:
+  mopidy:
+    image: wernight/mopidy:latest
+    container_name: mopidy
+    volumes:
+    - ...:/var/lib/mopidy/media:ro #Local media files
+    - ...:/var/lib/mopidy/local    #Local configurations
+    ports:
+    - 6600:6600 #MPD server for ncmpcpp
+    - 6800:6800 #HTTP server for web client
+    command: mopidy \
+      -o spotify/username=USERNAME -o spotify/password=PASSWORD \
+      -o soundcloud/auth_token=TOKEN

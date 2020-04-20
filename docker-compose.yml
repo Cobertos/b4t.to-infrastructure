@@ -14,6 +14,8 @@ services:
       -o "audio/output=lamemp3enc ! shout2send async=false mount=mopidy ip=icecast port=8000 password=mopidy"
       -o "spotify/username=$SPOTIFY_USERNAME"
       -o "spotify/password=$SPOTIFY_PASSWORD"
+      -o "spotify/client_id=$SPOTIFY_CLIENT_ID"
+      -o "spotify/client_secret=$SPOTIFY_CLIENT_SECRET"
       -o "soundcloud/auth_token=$SOUNDCLOUD_TOKEN"
     depends_on:
       - icecast

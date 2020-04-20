@@ -28,4 +28,11 @@ services:
       - 8000:8000 #Default icecast
     #environment:
       #ICECAST_SOURCE_PASSWORD: "$ICECAST_PASSWORD"
+  namecheap-ddns:
+    image: joshuamorris3/namecheap-ddns-update
+    container_name: namecheap-ddns
+    environment:
+      NC_DDNS_PASS: $NAMECHEAP_DDNS_PASSWORD
+      DOMAIN: cobertos.dev
+      INTERVAL: 10s
 

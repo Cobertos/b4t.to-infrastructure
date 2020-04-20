@@ -4,13 +4,25 @@ services:
     image: wernight/mopidy:latest
     container_name: mopidy
     volumes:
-    - ~/Dropbox/Music/NotOnSpotify:/var/lib/mopidy/media:ro #Local media files
-    - ./mopidy/config:/var/lib/mopidy/local    #Local configurations
+      - ~/Dropbox/Music/NotOnSpotify:/var/lib/mopidy/media:ro #Local media files
+      - ./mopidy/config:/var/lib/mopidy/local    #Local configurations
     ports:
-    - 6600:6600 #MPD server for ncmpcpp
-    - 6680:6680 #HTTP server for web client
+      - 6600:6600 #MPD server for ncmpcpp
+      - 6680:6680 #HTTP server for web client
     command: >-
       mopidy
-      -o spotify/username=USERNAME -o spotify/password=PASSWORD
-      -o soundcloud/auth_token=TOKEN
+      -o "audio/output=lamemp3enc ! shout2send async=false mount=mopidy ip=icecast port=8000 password=mopidy"
+      -o "spotify/username=$SPOTIFY_USERNAME"
+      -o "spotify/password=$SPOTIFY_PASSWORD"
+      -o "soundcloud/auth_token=$SOUNDCLOUD_TOKEN"
+    depends_on:
+      - icecast
+  icecast:
+    build: 
+      context: icecast/
+    container_name: icecast
+    ports:
+      - 8000:8000 #Default icecast
+    #environment:
+      #ICECAST_SOURCE_PASSWORD: "$ICECAST_PASSWORD"
 

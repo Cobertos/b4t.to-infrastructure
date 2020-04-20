@@ -17,6 +17,7 @@ services:
       -o "spotify/client_id=$SPOTIFY_CLIENT_ID"
       -o "spotify/client_secret=$SPOTIFY_CLIENT_SECRET"
       -o "soundcloud/auth_token=$SOUNDCLOUD_TOKEN"
+      -o "youtube/youtube_api_key=$YOUTUBE_KEY"
     depends_on:
       - icecast
   icecast:

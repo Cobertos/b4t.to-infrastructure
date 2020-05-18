@@ -1,11 +1,32 @@
+# Everythings hosted off of cobertos.dev
+
+# Please pass in the following variables
+# $ICECAST_PASSWORD - Just sonething strong and random, used by the icecast admin panel and stream connection
+# $SPOTIFY_USERNAME
+# $SPOTIFY_CLIENT_ID
+# $SPOTIFY_CLIENT_SECRET
+# $SOUNDCLOUD_TOKEN
+# $YOUTUBE_KEY
+
+# $SEAFILE_MYSQL_PASSWORD - Just something strong and random
+# $SEAFILE_ADMIN_PASSWORD - Admin account password
+
 version: "3.6"
 services:
+  # Mopidy + Icecast - My music streaming replacement
+  # NOTE: Still super WIP
+  # TODO: Fix the latency between playing the song and hearing it on the stream
+  # (there seems to be a icecast configuration I can change for this about
+  # buffering)
+  # TODO: Some of the integrations don't work ;-;
+  # TODO: Setup logging and hook up log scanner
+  # TODO: Setup healthchecks
   mopidy:
     image: wernight/mopidy:latest
     container_name: mopidy
     volumes:
       - ~/Dropbox/Music/NotOnSpotify:/var/lib/mopidy/media:ro #Local media files
-      - ./mopidy/config:/var/lib/mopidy/local    #Local configurations
+      - /opt/batto-cave/mopidy-data:/var/lib/mopidy/local     #Local configurations
     ports:
       - 6600:6600 #MPD server for ncmpcpp
       - 6680:6680 #HTTP server for web client
@@ -31,6 +52,58 @@ services:
       ICECAST_RELAY_PASSWORD: "$ICECAST_PASSWORD"
       ICECAST_ADMIN_PASSWORD: "$ICECAST_PASSWORD"
       ICECAST_ADMIN_USERNAME: admin
+
+  # Seafile - Dropbox replacement
+  # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
+  # TODO: I should come back to this and use gosu to run this stuff as non-root
+  # or use another container that solves this
+  # https://github.com/haiwen/seafile-docker/issues/86
+  seafile:
+    image: seafileltd/seafile
+
+  # TODO: Do multiple things need to use this DB?
+  seafile-db:
+    image: mariadb:10.1
+    container_name: seafile-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "$SEAFILE_MYSQL_PASSWORD"
+      MYSQL_LOG_CONSOLE: true
+    volumes:
+      - /opt/batto-cave/seafile-mysql/db:/var/lib/mysql
+    networks:
+      - seafile-net
+
+  seafile-memcached:
+    image: memcached:1.5.6
+    container_name: seafile-memcached
+    entrypoint: memcached -m 256
+    networks:
+      - seafile-net
+
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    #TODO: Setup traefik and use a let hostname instead of a port
+    ports:
+      - "81:81"
+      - "444:444"
+    volumes:
+      - /opt/batto-cave/seafile-data:/shared
+    environment:
+      DB_HOST: seafile-db
+      DB_ROOT_PASSWD: "$SEAFILE_MYSQL_PASSWORD"
+      TIME_ZONE: Etc/EST
+      SEAFILE_ADMIN_EMAIL: cobertosrobertos@gmail.com
+      SEAFILE_ADMIN_PASSWORD: "$SEAFILE_ADMIN_PASSWORD"
+      SEAFILE_SERVER_LETSENCRYPT: true
+      SEAFILE_SERVER_HOSTNAME: seafile.cobertos.dev
+    depends_on:
+      - db
+      - memcached
+    networks:
+      - seafile-net
+
+  # Networking
   namecheap-ddns:
     image: joshuamorris3/namecheap-ddns-update
     container_name: namecheap-ddns
@@ -39,3 +112,5 @@ services:
       DOMAIN: cobertos.dev
       INTERVAL: 10s
 
+networks:
+  seafile-net:

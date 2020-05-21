@@ -31,7 +31,7 @@ services:
       - /opt/batto-cave/mopidy-data:/var/lib/mopidy/local     #Local configurations
     ports:
       - 6600:6600 #MPD server for ncmpcpp
-      - 6680:6680 #HTTP server for web client
+    #  - 6680:6680 #HTTP server for web client
     command: >-
       mopidy
       -o "audio/output=lamemp3enc ! shout2send async=false mount=mopidy ip=icecast port=8000 password=$ICECAST_PASSWORD"
@@ -48,13 +48,15 @@ services:
       - icecast
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`mopidy.cobertos.dev`)"
+      # Mopidy exposes multiple ports, we just need the dashboard
+      - "traefik.http.services.mopidy.loadbalancer.server.port=6680"
+      - "traefik.http.routers.mopidy.rule=Host(`mopidy.cobertos.dev`) || Host(`mopidy.b4t.to`)"
   icecast:
     build: 
       context: icecast/
     container_name: icecast
-    ports:
-      - 8000:8000 #Default icecast
+    # ports:
+    #  - 8000:8000 #Default icecast
     environment:
       ICECAST_SOURCE_PASSWORD: "$ICECAST_PASSWORD"
       ICECAST_RELAY_PASSWORD: "$ICECAST_PASSWORD"
@@ -65,7 +67,7 @@ services:
       - mopidy-icecast
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`icecast.cobertos.dev`)"
+      - "traefik.http.routers.icecast.rule=Host(`icecast.cobertos.dev`) || Host(`icecast.b4t.to`)"
 
   # Seafile - Dropbox replacement
   # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
@@ -79,7 +81,7 @@ services:
     container_name: seafile-mysql
     environment:
       MYSQL_ROOT_PASSWORD: "$SEAFILE_MYSQL_PASSWORD"
-      MYSQL_LOG_CONSOLE: true
+      MYSQL_LOG_CONSOLE: "true"
     volumes:
       - /opt/batto-cave/seafile-mysql/db:/var/lib/mysql
     networks:
@@ -95,29 +97,28 @@ services:
   seafile:
     image: seafileltd/seafile-mc:latest
     container_name: seafile
-    #TODO: Setup traefik and use a let hostname instead of a port
-    ports:
-      - "81:81"
-      - "444:444"
     volumes:
       - /opt/batto-cave/seafile-data:/shared
+   # ports:
+   #   - "80:80"
+   #   - "443:443"
     environment:
       DB_HOST: seafile-db
       DB_ROOT_PASSWD: "$SEAFILE_MYSQL_PASSWORD"
-      TIME_ZONE: Etc/EST
+      TIME_ZONE: America/Detroit
       SEAFILE_ADMIN_EMAIL: cobertosrobertos@gmail.com
       SEAFILE_ADMIN_PASSWORD: "$SEAFILE_ADMIN_PASSWORD"
-      SEAFILE_SERVER_LETSENCRYPT: true
-      SEAFILE_SERVER_HOSTNAME: seafile.cobertos.dev
+      SEAFILE_SERVER_LETSENCRYPT: "false"
     depends_on:
-      - db
-      - memcached
+      - seafile-db
+      - seafile-memcached
     networks:
       - traefik-proxy
       - seafile-internal
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`seafile.cobertos.dev`)"
+      - "traefik.http.services.seafile.loadbalancer.server.port=80"
+      - "traefik.http.routers.seafile.rule=Host(`seafile.cobertos.dev`) || Host(`seafile.b4t.to`)"
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...
@@ -140,15 +141,20 @@ services:
 
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik-proxy"
+      # This needs to be the FULL NETWORK NAME. If not, Traefil will sometimes work
+      # and sometimes give a bad gateway for containers (randomly every run)
+      # https://stackoverflow.com/a/46439598/2759427
+      - "--providers.docker.network=batto-cave_traefik-proxy"
+
+      #- "--log.level=DEBUG"
 
       - "--entrypoints.http.address=:80"
       - "--entrypoints.https.address=:443"
 
-      - "--certificatesresolvers.myhttpchallenge.acme.httpchallenge=true"
-      - "--certificatesresolvers.myhttpchallenge.acme.httpchallenge.entrypoint=http"
-      - "--certificatesresolvers.myhttpchallenge.acme.email=${EMAIL}"
-      - "--certificatesresolvers.myhttpchallenge.acme.storage=/letsencrypt/acme.json"
+      #- "--certificatesresolvers.myhttpchallenge.acme.httpchallenge=true"
+      #- "--certificatesresolvers.myhttpchallenge.acme.httpchallenge.entrypoint=http"
+      #- "--certificatesresolvers.myhttpchallenge.acme.email=${EMAIL}"
+      #- "--certificatesresolvers.myhttpchallenge.acme.storage=/letsencrypt/acme.json"
     volumes:
       #- ./traefik/traefik.yml:/etc/traefik/traefik.yml
       - "./letsencrypt:/letsencrypt"
@@ -160,30 +166,32 @@ services:
       - traefik-proxy
     labels:
       - "traefik.enable=true"
+      #- "traefik.docker.network=traefik-proxy"
       # Traefik dashboard configuration with HTTP basic auth
-      - "traefik.http.routers.api.rule=Host(`traefik.cobertos.dev`)"
+      - "traefik.http.routers.api.rule=Host(`traefik.cobertos.dev`) || Host(`traefik.localhost`) || Host(`traefik.b4t.to`)"
       - "traefik.http.routers.api.service=api@internal"
       - "traefik.http.routers.api.middlewares=auth"
-      - "traefik.http.middlewares.auth.basicauth.users=$(htttpwd -nbd $TRAEFIK_USER_PASSWORD)"
+      - "traefik.http.middlewares.auth.basicauth.users=$TRAEFIK_HTPASSWD"
+#TODO: Readd
       # Traefik redirect all http to https
-      - "traefik.http.routers.http_catchall.rule: HostRegexp(`{any:.+}`)
-      - "traefik.http.routers.http_catchall.entrypoints=http"
-      - "traefik.http.routers.http_catchall.middlewares=https_redirect"
-      - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
+#      - "traefik.http.routers.http_catchall.rule: HostRegexp(`{any:.+}`)"
+#      - "traefik.http.routers.http_catchall.entrypoints=http"
+#      - "traefik.http.routers.http_catchall.middlewares=https_redirect"
+#      - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
+#      - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
       # Gzip
-      - "traefik.http.middlewares.compress.compress=true"
+      #- "traefik.http.middlewares.compress.compress=true"
       # Security - TODO: More research on a couple of these, like stsSeconds
       # https://github.com/Holi0317/homeserver-compose/blob/master/traefik/build/config/middlewares.toml
-      - "traefik.http.middlewares.secure_head.headers.accessControlAllowOrigin=null"
-      - "traefik.http.middlewares.secure_head.headers.sslRedirect=true"
-      - "traefik.http.middlewares.secure_head.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.secure_head.headers.browserXssFilter=true"
-      - "traefik.http.middlewares.secure_head.headers.contentSecurityPolicy=upgrade-insecure-requests"
-      - "traefik.http.middlewares.secure_head.headers.stsSeconds=31536000"
-      - "traefik.http.middlewares.secure_head.headers.framedeny=true"
-      - "traefik.http.middlewares.secure_head.headers.customResponseHeaders.Referrer-Policy=no-referrer"
-      - "traefik.http.middlewares.secure_head.headers.customResponseHeaders.X-Powered-By=null"
+      #- "traefik.http.middlewares.secure_head.headers.accessControlAllowOrigin=null"
+      #- "traefik.http.middlewares.secure_head.headers.sslRedirect=true"
+      #- "traefik.http.middlewares.secure_head.headers.contentTypeNosniff=true"
+      #- "traefik.http.middlewares.secure_head.headers.browserXssFilter=true"
+      #- "traefik.http.middlewares.secure_head.headers.contentSecurityPolicy=upgrade-insecure-requests"
+      #- "traefik.http.middlewares.secure_head.headers.stsSeconds=31536000"
+      #- "traefik.http.middlewares.secure_head.headers.framedeny=true"
+      #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.Referrer-Policy=no-referrer"
+      #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.X-Powered-By=null"
 
   namecheap-ddns:
     image: joshuamorris3/namecheap-ddns-update

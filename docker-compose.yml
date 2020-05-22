@@ -102,6 +102,8 @@ services:
    # ports:
    #   - "80:80"
    #   - "443:443"
+      - "8000:8000"
+      - "8082:8082"
     environment:
       DB_HOST: seafile-db
       DB_ROOT_PASSWD: "$SEAFILE_MYSQL_PASSWORD"

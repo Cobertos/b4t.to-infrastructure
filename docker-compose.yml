@@ -1,5 +1,7 @@
 # Everythings hosted off of cobertos.dev
 
+# TODO: Add restarts label to everyone
+
 # Please pass in the following variables
 # $EMAIL - Email for Traefik
 
@@ -157,6 +159,69 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.statping.rule=Host(`statping.cobertos.dev`) || Host(`statping.b4t.to`)"
 
+  # TODO Make a separate password
+  ttrss-db:
+    image: postgres:12-alpine
+    volumes:
+      - /opt/batto-cave/ttrss-data:/var/lib/postgresql/data
+    networks:
+      - ttrss-internal
+    environment:
+      POSTGRES_PASSWORD: $SEAFILE_MYSQL_PASSWORD
+      POSTGRES_USER: ttrss
+
+  ttrss-app:
+    image: cthulhoo/ttrss-fpm-pgsql-static
+    restart: unless-stopped
+    environment:
+      DB_TYPE: pgsql
+      DB_HOST: ttrss-db
+      DB_NAME: ttrss
+      DB_USER: ttrss
+      DB_PASS: $SEAFILE_MYSQL_PASSWORD
+      OWNER_UID: 1000
+      OWNER_GID: 1000
+      SELF_URL_PATH: ttrss.b4t.to
+    networks:
+      - ttrss-internal
+    volumes:
+      - /opt/batto-cave/ttrss:/var/www/html
+    depends_on:
+      - ttrss-db
+
+  # updater:
+  #   image: cthulhoo/ttrss-fpm-pgsql-static
+  #   restart: unless-stopped
+  #   environment:
+  #     - DB_TYPE=pgsql
+  #     - DB_HOST=db
+  #     - DB_NAME=${POSTGRES_USER}
+  #     - DB_USER=${POSTGRES_USER}
+  #     - DB_PASS=${POSTGRES_PASSWORD}
+  #     - OWNER_UID=${OWNER_UID}
+  #     - OWNER_GID=${OWNER_GID}
+  #     - SELF_URL_PATH=${SELF_URL_PATH}
+  #   volumes:
+  #     - app:/var/www/html
+  #   depends_on:
+  #     - app
+  #   command: /updater.sh
+
+  ttrss-web:
+    image: cthulhoo/ttrss-web
+    restart: unless-stopped
+    volumes:
+      - /opt/batto-cave/ttrss:/var/www/html:ro
+    depends_on:
+      - ttrss-app
+    networks:
+      - traefik-proxy
+      - ttrss-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.seafile.loadbalancer.server.port=2015"
+      - "traefik.http.routers.ttrss-web.rule=Host(`ttrss.cobertos.dev`) || Host(`ttrss.b4t.to`)"
+
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...
@@ -249,4 +314,6 @@ networks:
   seafile-internal:
     internal: true
   statping-internal:
+    internal: true
+  ttrss-internal:
     internal: true

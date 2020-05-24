@@ -166,6 +166,7 @@ services:
   # TODO Make a separate password
   miniflux-db:
     image: postgres:alpine
+    container_name: miniflux-db
     volumes:
       - /opt/batto-cave/miniflux-data:/var/lib/postgresql/data
     networks:
@@ -177,6 +178,7 @@ services:
   # https://miniflux.app/docs/installation.html#docker
   miniflux:
     image: miniflux/miniflux:latest
+    container_name: miniflux
     restart: unless-stopped
     networks:
       - miniflux-internal
@@ -193,6 +195,49 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.miniflux.loadbalancer.server.port=8080"
       - "traefik.http.routers.miniflux.rule=Host(`miniflux.cobertos.dev`) || Host(`miniflux.b4t.to`)"
+
+  portainer:
+    image: portainer/portainer:latest
+    container_name: portainer
+    networks:
+      - traefik-proxy
+    # ports:
+    #   - "8000:8000"
+    #   - "9000:9000" # 9000 has the dashboard
+    command:
+      - "--admin-password='${TRAEFIK_HTPASSWD}'"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro" # Sync timezone information
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/opt/batto-cave/portainer:/data"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.cobertos.dev`) || Host(`portainer.b4t.to`)"
+
+  wireguard:
+    image: linuxserver/wireguard
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      PUID: '1000'
+      PGID: '1000'
+      TZ: America/Detroit
+      SERVERURL: 'b4t.to'
+      #SERVERPORT=51820 #optional
+      #PEERS: 1 #optional
+      #PEERDNS: auto #optional
+      #INTERNAL_SUBNET=10.13.13.0 #optional
+    volumes:
+      - /opt/batto-cave/wireguard:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...

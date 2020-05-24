@@ -159,69 +159,30 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.statping.rule=Host(`statping.cobertos.dev`) || Host(`statping.b4t.to`)"
 
+  # Didn't use ttrss because of community drama, let's keep it simple for now
+  # anyway, I kind of want to do my own RSS stuff in the future with Vue. Might
+  # be nice to put together a tiny app that surfaces the news I want to read
+  # with other ideas from my Notion.so note on this
   # TODO Make a separate password
-  ttrss-db:
-    image: postgres:12-alpine
+  miniflux-db:
+    image: postgres:alpine
     volumes:
-      - /opt/batto-cave/ttrss-data:/var/lib/postgresql/data
+      - /opt/batto-cave/miniflux-data:/var/lib/postgresql/data
     networks:
-      - ttrss-internal
+      - miniflux-internal
     environment:
+      POSTGRES_USER: miniflux
       POSTGRES_PASSWORD: $SEAFILE_MYSQL_PASSWORD
-      POSTGRES_USER: ttrss
 
-  ttrss-app:
-    image: cthulhoo/ttrss-fpm-pgsql-static
+  miniflux:
+    image: miniflux/miniflux:latest
     restart: unless-stopped
+    networks:
+      - miniflux-internal
+    depends_on:
+      - miniflux-db
     environment:
-      DB_TYPE: pgsql
-      DB_HOST: ttrss-db
-      DB_NAME: ttrss
-      DB_USER: ttrss
-      DB_PASS: $SEAFILE_MYSQL_PASSWORD
-      OWNER_UID: 1000
-      OWNER_GID: 1000
-      SELF_URL_PATH: http://ttrss.b4t.to
-    networks:
-      - ttrss-internal
-    volumes:
-      - /opt/batto-cave/ttrss:/var/www/html
-    depends_on:
-      - ttrss-db
-
-  # updater:
-  #   image: cthulhoo/ttrss-fpm-pgsql-static
-  #   restart: unless-stopped
-  #   environment:
-  #     - DB_TYPE=pgsql
-  #     - DB_HOST=db
-  #     - DB_NAME=${POSTGRES_USER}
-  #     - DB_USER=${POSTGRES_USER}
-  #     - DB_PASS=${POSTGRES_PASSWORD}
-  #     - OWNER_UID=${OWNER_UID}
-  #     - OWNER_GID=${OWNER_GID}
-  #     - SELF_URL_PATH=${SELF_URL_PATH}
-  #   volumes:
-  #     - app:/var/www/html
-  #   depends_on:
-  #     - app
-  #   command: /updater.sh
-
-  ttrss-web:
-    image: cthulhoo/ttrss-web
-    restart: unless-stopped
-    volumes:
-      - /opt/batto-cave/ttrss:/var/www/html:ro
-    depends_on:
-      - ttrss-app
-    networks:
-      - traefik-proxy
-      - ttrss-internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.ttrss-web.loadbalancer.server.port=2015"
-      - "traefik.http.routers.ttrss-web.rule=Host(`ttrss.cobertos.dev`) || Host(`ttrss.b4t.to`)"
-
+      DATABASE_URL: postgres://miniflux:${SEAFILE_MYSQL_PASSWORD}@miniflux-db/miniflux?sslmode=disable
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...
@@ -322,5 +283,5 @@ networks:
     internal: true
   statping-internal:
     internal: true
-  ttrss-internal:
+  miniflux-internal:
     internal: true

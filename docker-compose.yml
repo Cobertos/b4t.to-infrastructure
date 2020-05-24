@@ -205,7 +205,7 @@ services:
     #   - "8000:8000"
     #   - "9000:9000" # 9000 has the dashboard
     command:
-      - "--admin-password='${TRAEFIK_HTPASSWD}'"
+      - "--admin-password=${TRAEFIK_HTPASSWD}"
     volumes:
       - "/etc/localtime:/etc/localtime:ro" # Sync timezone information
       - "/var/run/docker.sock:/var/run/docker.sock:ro"

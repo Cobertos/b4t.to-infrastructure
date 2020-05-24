@@ -183,6 +183,9 @@ services:
       - miniflux-db
     environment:
       DATABASE_URL: postgres://miniflux:${SEAFILE_MYSQL_PASSWORD}@miniflux-db/miniflux?sslmode=disable
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.miniflux.rule=Host(`miniflux.cobertos.dev`) || Host(`miniflux.b4t.to`)"
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...

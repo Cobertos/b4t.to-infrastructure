@@ -180,6 +180,7 @@ services:
     restart: unless-stopped
     networks:
       - miniflux-internal
+      - traefik-proxy
     depends_on:
       - miniflux-db
     environment:
@@ -233,7 +234,7 @@ services:
       - "./letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     ports:
-      - "8080:8080"
+      #- "8080:8080"
       - "80:80"
     networks:
       - traefik-proxy

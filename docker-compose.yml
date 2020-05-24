@@ -181,7 +181,7 @@ services:
       DB_PASS: $SEAFILE_MYSQL_PASSWORD
       OWNER_UID: 1000
       OWNER_GID: 1000
-      SELF_URL_PATH: ttrss.b4t.to
+      SELF_URL_PATH: http://ttrss.b4t.to
     networks:
       - ttrss-internal
     volumes:
@@ -219,7 +219,7 @@ services:
       - ttrss-internal
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.seafile.loadbalancer.server.port=2015"
+      - "traefik.http.services.ttrss-web.loadbalancer.server.port=2015"
       - "traefik.http.routers.ttrss-web.rule=Host(`ttrss.cobertos.dev`) || Host(`ttrss.b4t.to`)"
 
 
@@ -296,12 +296,19 @@ services:
       #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.Referrer-Policy=no-referrer"
       #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.X-Powered-By=null"
 
-  namecheap-ddns:
+  #namecheap-ddns-cobertos-dev: &ddns-config
+  #  image: joshuamorris3/namecheap-ddns-update
+  #  container_name: namecheap-ddns
+  #  environment:
+  #    NC_DDNS_PASS: $NAMECHEAP_DDNS_PASSWORD
+  #    DOMAIN: cobertos.dev
+  #    INTERVAL: 10s
+  namecheap-ddns-b4t-to:
     image: joshuamorris3/namecheap-ddns-update
-    container_name: namecheap-ddns
+    container_name: namecheap-ddns-b4t-to
     environment:
-      NC_DDNS_PASS: $NAMECHEAP_DDNS_PASSWORD
-      DOMAIN: cobertos.dev
+      NC_DDNS_PASS: $NAMECHEAP_DDNS_B4T_TO_PASSWORD
+      DOMAIN: b4t.to
       INTERVAL: 10s
 
 networks:

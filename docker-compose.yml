@@ -190,6 +190,7 @@ services:
       ADMIN_PASSWORD: $SEAFILE_ADMIN_PASSWORD
     labels:
       - "traefik.enable=true"
+      - "traefik.http.services.miniflux.loadbalancer.server.port=8080"
       - "traefik.http.routers.miniflux.rule=Host(`miniflux.cobertos.dev`) || Host(`miniflux.b4t.to`)"
 
   # Networking

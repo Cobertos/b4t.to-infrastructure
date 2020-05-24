@@ -174,6 +174,7 @@ services:
       POSTGRES_USER: miniflux
       POSTGRES_PASSWORD: $SEAFILE_MYSQL_PASSWORD
 
+  # https://miniflux.app/docs/installation.html#docker
   miniflux:
     image: miniflux/miniflux:latest
     restart: unless-stopped
@@ -183,6 +184,10 @@ services:
       - miniflux-db
     environment:
       DATABASE_URL: postgres://miniflux:${SEAFILE_MYSQL_PASSWORD}@miniflux-db/miniflux?sslmode=disable
+      RUN_MIGRATIONS: '1'
+      CREATE_ADMIN: '1'
+      ADMIN_USERNAME: 'cobertos'
+      ADMIN_PASSWORD: $SEAFILE_ADMIN_PASSWORD
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.miniflux.rule=Host(`miniflux.cobertos.dev`) || Host(`miniflux.b4t.to`)"

@@ -214,7 +214,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
       - "traefik.http.routers.portainer.rule=Host(`portainer.cobertos.dev`) || Host(`portainer.b4t.to`)"
-
+  
+  # This will require some extra configuration in wg0.conf in the
+  # wireguard config. We need to add the subnet for our local
+  # network to the AllowedIPs
+  # https://www.stavros.io/posts/how-to-configure-wireguard/
   wireguard:
     image: linuxserver/wireguard
     container_name: wireguard
@@ -227,7 +231,7 @@ services:
       TZ: America/Detroit
       SERVERURL: 'b4t.to'
       #SERVERPORT=51820 #optional
-      #PEERS: 1 #optional
+      PEERS: '1'
       #PEERDNS: auto #optional
       #INTERNAL_SUBNET=10.13.13.0 #optional
     volumes:
@@ -340,3 +344,4 @@ networks:
     internal: true
   miniflux-internal:
     internal: true
+

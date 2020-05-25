@@ -241,6 +241,20 @@ services:
       - "traefik.http.routers.portainer.tls.certresolver=myhttpchallenge"  
       - "traefik.http.routers.portainer.middlewares=compress"
 
+  duplicati:
+    image: duplicati/duplicati
+    container_name: duplicati
+    networks:
+      - traefik-proxy
+    volumes:
+      - "/opt/batto-cave/dupicati:/data"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=8200"
+      - "traefik.http.routers.portainer.rule=Host(`duplicati.cobertos.dev`) || Host(`duplicati.b4t.to`)"
+      - "traefik.http.routers.portainer.tls.certresolver=myhttpchallenge"  
+      - "traefik.http.routers.portainer.middlewares=lan-only,compress"
+
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local
   # network to the AllowedIPs, add a suffix to the Address of the peer

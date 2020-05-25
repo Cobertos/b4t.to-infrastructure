@@ -17,3 +17,7 @@ My home server, maintained with Docker Compose!
 * [portainer](portainer.b4t.to) - Container management and monitoring
 * [traefik](traefik.b4t.to) - Reverse proxy for all HTTP, manages all HTTPS and subdomain routing
 * namecheap-ddns - Syncs dynamic IP to the A records on namecheap
+
+## TODO - (add link to Notion.so list)
+* Configure backups
+* Configure statping

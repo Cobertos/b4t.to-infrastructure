@@ -116,7 +116,7 @@ services:
     container_name: seafile
     volumes:
       - /opt/batto-cave/seafile-data:/shared
-    ports:
+   # ports:
     # None of these actually need to be exposed because
     # Nginx will hook them all up inside this container
     # (see TODO at top of seafile section)

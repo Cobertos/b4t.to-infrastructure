@@ -15,6 +15,10 @@
 # $SEAFILE_MYSQL_PASSWORD - Just something strong and random
 # $SEAFILE_ADMIN_PASSWORD - Admin account password
 
+# $TRAEFIK_HTPASSWD - The Traefik Dashboard Basic Auth Htpasswd
+
+# $PORTAINER_HTPASSWD - The portainer admin password, without the username: part
+
 version: "3.6"
 services:
   # Mopidy + Icecast - My music streaming replacement
@@ -205,7 +209,7 @@ services:
     #   - "8000:8000"
     #   - "9000:9000" # 9000 has the dashboard
     command:
-      - "--admin-password=${TRAEFIK_HTPASSWD}"
+      - "--admin-password=${PORTAINER_HTPASSWD}"
     volumes:
       - "/etc/localtime:/etc/localtime:ro" # Sync timezone information
       - "/var/run/docker.sock:/var/run/docker.sock:ro"

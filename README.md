@@ -10,6 +10,7 @@ My home server, maintained with Docker Compose!
 #### Private
 * [seafile](seafile.b4t.to) - Dropbox replacement with way better configs for ignoring files
 * [miniflux](miniflux.b4t.to) - RSS feed reader
+* [duplicati](duplicati.b4t.to) - Backups
 * [wireguard](b4t.to:51820) - VPN
 
 #### Plumbing

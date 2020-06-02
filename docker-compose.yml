@@ -239,21 +239,26 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
       - "traefik.http.routers.portainer.rule=Host(`portainer.cobertos.dev`) || Host(`portainer.b4t.to`)"
       - "traefik.http.routers.portainer.tls.certresolver=myhttpchallenge"  
-      - "traefik.http.routers.portainer.middlewares=compress"
-
-  duplicati:
-    image: duplicati/duplicati
-    container_name: duplicati
-    networks:
-      - traefik-proxy
-    volumes:
-      - "/opt/batto-cave/dupicati:/data"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.portainer.loadbalancer.server.port=8200"
-      - "traefik.http.routers.portainer.rule=Host(`duplicati.cobertos.dev`) || Host(`duplicati.b4t.to`)"
-      - "traefik.http.routers.portainer.tls.certresolver=myhttpchallenge"  
       - "traefik.http.routers.portainer.middlewares=lan-only,compress"
+
+  # TODO: Rwquires that you login off of a localhost domain
+  # before you can actually do anything :/. Traefik does not play
+  # nicely with this
+#  duplicati:
+#    image: duplicati/duplicati
+#    container_name: duplicati
+#    ports:
+#      - "8200:8200"
+   # networks:
+   #   - traefik-proxy
+#    volumes:
+#      - "/opt/batto-cave/dupicati:/data"
+   # labels:
+   #   - "traefik.enable=true"
+   #   - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+   #   - "traefik.http.routers.duplicati.rule=Host(`duplicati.cobertos.dev`) || Host(`duplicati.b4t.to`) || Host(`duplicati.localhost`)"
+   #   - "traefik.http.routers.duplicati.tls.certresolver=myhttpchallenge"  
+   #   - "traefik.http.routers.duplicati.middlewares=lan-only,compress"
 
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local
@@ -296,6 +301,8 @@ services:
       # I could also use a traefik.yml and mount it to 
       #   - ./traefik/traefik.yml:/etc/traefik/traefik.yml
       # but ehhhh, I'll do that if this really becomes unweildy
+
+      - "--log.level=DEBUG"
 
       # Turn on dashboard, configured to use Basic Auth in this contains labels
       # https://docs.traefik.io/operations/dashboard/#secure-mode
@@ -370,9 +377,10 @@ services:
     image: joshuamorris3/namecheap-ddns-update
     container_name: namecheap-ddns-b4t-to
     environment:
-      NC_DDNS_PASS: $NAMECHEAP_DDNS_B4T_TO_PASSWORD
-      DOMAIN: b4t.to
-      INTERVAL: 10s
+      NC_DDNS_PASS: '${NAMECHEAP_DDNS_B4T_TO_PASSWORD}'
+      DOMAIN: 'b4t.to'
+      SUBDOMAINS: '*,@'
+      INTERVAL: '10s'
 
 networks:
   traefik-proxy:

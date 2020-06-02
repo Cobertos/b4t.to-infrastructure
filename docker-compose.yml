@@ -21,6 +21,8 @@
 
 # $PORTAINER_HTPASSWD - The portainer admin password, without the username: part
 
+# $SFTP_COBERTOS_PASSWORD - The SFTP account password for cobertos
+
 version: "3.6"
 services:
   # Mopidy + Icecast - My music streaming replacement
@@ -289,6 +291,16 @@ services:
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
+
+  sftp:
+    image: atmoz/sftp
+    volumes:
+      - /opt/batto-cave/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key
+      - /opt/batto-cave/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key
+      - /home/cobertos:/home/cobertos/upload
+    ports:
+      - "2222:22"
+    command: cobertos:${SFTP_COBERTOS_PASSWORD}:1000
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...

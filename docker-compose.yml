@@ -304,7 +304,7 @@ services:
     volumes:
       - /etc/ssh/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
       - /etc/ssh/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro
-      - /home/cobertos:/home/cobertos/upload
+      - /home/cobertos:/home/cobertos
     ports:
       - "2222:22"
     command: cobertos:${SFTP_COBERTOS_PASSWORD}:1000

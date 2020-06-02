@@ -292,11 +292,18 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
 
+  #TODO: Restrict to LAN ONLY with traefik
+  # Make sure to run these commands on the host box to generate the SSH keys
+  # for keeping the same identity between runs
+  # ssh-keygen -t ed25519 -f ssh_host_ed25519_key < /dev/null
+  # ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key < /dev/null
+  # Make sure to also make these file permissions restricted
   sftp:
     image: atmoz/sftp
+    container_name: sftp
     volumes:
-      - /opt/batto-cave/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key
-      - /opt/batto-cave/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key
+      - /etc/ssh/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
+      - /etc/ssh/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro
       - /home/cobertos:/home/cobertos/upload
     ports:
       - "2222:22"

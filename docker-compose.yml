@@ -243,6 +243,24 @@ services:
       - "traefik.http.routers.portainer.tls.certresolver=myhttpchallenge"  
       - "traefik.http.routers.portainer.middlewares=lan-only,compress"
 
+  # Uses PHP, memcached and apache under the hood
+  rss-bridge:
+    image: rssbridge/rss-bridge:latest
+    container_name: rss-bridge
+    restart: unless-stopped
+    networks:
+      - traefik-proxy
+    volumes:
+      - ./rss-bridge/whitelist.txt:/app/whitelist.txt
+    # ports:
+    #   - "3031:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.rss-bridge.loadbalancer.server.port=80"
+      - "traefik.http.routers.rss-bridge.rule=Host(`rss-bridge.cobertos.dev`) || Host(`rss-bridge.b4t.to`)"
+      - "traefik.http.routers.rss-bridge.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.rss-bridge.middlewares=compress"
+
   # TODO: Rwquires that you login off of a localhost domain
   # before you can actually do anything :/. Traefik does not play
   # nicely with this

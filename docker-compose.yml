@@ -23,6 +23,9 @@
 
 # $SFTP_COBERTOS_PASSWORD - The SFTP account password for cobertos
 
+# $CLOUDFLARE_DDNS_B4T_TO_API_KEY - The API key for Cloudflare DDNS editting for b4t.to
+#                                   Needs Zone:Zone:Read and Zone:DNS:Edit
+
 version: "3.6"
 services:
   # Mopidy + Icecast - My music streaming replacement
@@ -60,8 +63,8 @@ services:
       - "traefik.enable=true"
       # Mopidy exposes multiple ports, we just need the dashboard
       - "traefik.http.services.mopidy.loadbalancer.server.port=6680"
-      - "traefik.http.routers.mopidy.rule=Host(`mopidy.cobertos.dev`) || Host(`mopidy.b4t.to`)"
-      - "traefik.http.routers.mopidy.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.mopidy.rule=Host(`mopidy.b4t.to`)"
+      - "traefik.http.routers.mopidy.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.mopidy.middlewares=compress"
   icecast:
     build: 
@@ -79,8 +82,8 @@ services:
       - mopidy-icecast
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.icecast.rule=Host(`icecast.cobertos.dev`) || Host(`icecast.b4t.to`)"
-      - "traefik.http.routers.icecast.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.icecast.rule=Host(`icecast.b4t.to`)"
+      - "traefik.http.routers.icecast.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.icecast.middlewares=lan-only,compress"
 
   # Seafile - Dropbox replacement
@@ -142,8 +145,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.seafile.loadbalancer.server.port=80"
-      - "traefik.http.routers.seafile.rule=Host(`seafile.cobertos.dev`) || Host(`seafile.b4t.to`)"
-      - "traefik.http.routers.seafile.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.seafile.rule=Host(`seafile.b4t.to`)"
+      - "traefik.http.routers.seafile.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.seafile.tls.domains.main=b4t.to"
+      - "traefik.http.routers.seafile.tls.domains.sans=['*.b4t.to']"
       - "traefik.http.routers.seafile.middlewares=compress"
 
   # TODO:MAke a separate password
@@ -179,8 +184,8 @@ services:
       - statping-internal
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.statping.rule=Host(`statping.cobertos.dev`) || Host(`statping.b4t.to`)"
-      - "traefik.http.routers.statping.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.statping.rule=Host(`statping.b4t.to`)"
+      - "traefik.http.routers.statping.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.statping.middlewares=compress"
 
   # Didn't use ttrss because of community drama, let's keep it simple for now
@@ -218,8 +223,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.miniflux.loadbalancer.server.port=8080"
-      - "traefik.http.routers.miniflux.rule=Host(`miniflux.cobertos.dev`) || Host(`miniflux.b4t.to`)"
-      - "traefik.http.routers.miniflux.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.miniflux.rule=Host(`miniflux.b4t.to`)"
+      - "traefik.http.routers.miniflux.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.miniflux.middlewares=compress"
 
   portainer:
@@ -239,8 +244,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.cobertos.dev`) || Host(`portainer.b4t.to`)"
-      - "traefik.http.routers.portainer.tls.certresolver=myhttpchallenge"  
+      - "traefik.http.routers.portainer.rule=Host(`portainer.b4t.to`)"
+      - "traefik.http.routers.portainer.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.portainer.middlewares=lan-only,compress"
 
   # Uses PHP, memcached and apache under the hood
@@ -257,9 +262,46 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.rss-bridge.loadbalancer.server.port=80"
-      - "traefik.http.routers.rss-bridge.rule=Host(`rss-bridge.cobertos.dev`) || Host(`rss-bridge.b4t.to`)"
-      - "traefik.http.routers.rss-bridge.tls.certresolver=myhttpchallenge"
+      - "traefik.http.routers.rss-bridge.rule=Host(`rss-bridge.b4t.to`)"
+      - "traefik.http.routers.rss-bridge.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.rss-bridge.middlewares=compress"
+
+  # Fresh RSS
+  freshrss-db:
+    image: postgres
+    restart: unless-stopped
+    container_name: freshrss-db
+    networks:
+      - freshrss-internal
+    volumes:
+      - /opt/batto-cave/freshrss-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=freshrss
+      - POSTGRES_PASSWORD=freshrss
+      - POSTGRES_DB=freshrss
+
+  freshrss:
+    image: freshrss/freshrss
+    restart: unless-stopped
+    networks:
+      - freshrss-internal
+      - traefik-proxy
+    #ports:
+    #  - "80:80"
+    depends_on:
+      - freshrss-db
+    volumes:
+      - /opt/batto-cave/freshrss-app/data:/var/www/FreshRSS/data
+      - /opt/batto-cave/freshrss-app/extensions:/var/www/FreshRSS/extensions
+    environment:
+      - CRON_MIN=*/20
+      - TZ=America/Detroit
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.freshrss.loadbalancer.server.port=80"
+      - "traefik.http.routers.freshrss.rule=Host(`freshrss.b4t.to`)"
+      - "traefik.http.routers.freshrss.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.freshrss.middlewares=compress"
 
   # TODO: Rwquires that you login off of a localhost domain
   # before you can actually do anything :/. Traefik does not play
@@ -277,7 +319,7 @@ services:
    #   - "traefik.enable=true"
    #   - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
    #   - "traefik.http.routers.duplicati.rule=Host(`duplicati.cobertos.dev`) || Host(`duplicati.b4t.to`) || Host(`duplicati.localhost`)"
-   #   - "traefik.http.routers.duplicati.tls.certresolver=myhttpchallenge"  
+   #   - "traefik.http.routers.duplicati.tls.certresolver=cloudflarednsresolver"  
    #   - "traefik.http.routers.duplicati.middlewares=lan-only,compress"
 
   # This will require some extra configuration in wg0.conf in the
@@ -339,7 +381,7 @@ services:
       #   - ./traefik/traefik.yml:/etc/traefik/traefik.yml
       # but ehhhh, I'll do that if this really becomes unweildy
 
-      - "--log.level=DEBUG"
+      # - "--log.level=DEBUG"
 
       # Turn on dashboard, configured to use Basic Auth in this contains labels
       # https://docs.traefik.io/operations/dashboard/#secure-mode
@@ -355,10 +397,7 @@ services:
       - "--entrypoints.http.address=:80"
       - "--entrypoints.https.address=:443"
 
-      - "--certificatesresolvers.myhttpchallenge.acme.httpchallenge=true"
-      - "--certificatesresolvers.myhttpchallenge.acme.httpchallenge.entrypoint=http"
-      - "--certificatesresolvers.myhttpchallenge.acme.email=${EMAIL}"
-      - "--certificatesresolvers.myhttpchallenge.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.cloudflarednsresolver.acme.dnschallenge.provider=cloudflare"
     volumes:
       - "./letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -366,6 +405,8 @@ services:
       #- "8080:8080"
       - "80:80"
       - "443:443"
+    environment:
+      CF_DNS_API_TOKEN: '${CLOUDFLARE_DDNS_B4T_TO_API_KEY}'
     networks:
       - traefik-proxy
     labels:
@@ -398,26 +439,16 @@ services:
       - "traefik.http.routers.http_catchall.middlewares=https_redirect"
 
       # == Traefik Dashboard config (traefik-ception) ==
-      - "traefik.http.routers.api.rule=Host(`traefik.cobertos.dev`) || Host(`traefik.localhost`) || Host(`traefik.b4t.to`)"
+      - "traefik.http.routers.api.rule=Host(`traefik.b4t.to`) || Host(`traefik.localhost`)"
       - "traefik.http.routers.api.service=api@internal"
       - "traefik.http.routers.api.middlewares=lan-only,auth"
 
-
-  #namecheap-ddns-cobertos-dev: &ddns-config
-  #  image: joshuamorris3/namecheap-ddns-update
-  #  container_name: namecheap-ddns
-  #  environment:
-  #    NC_DDNS_PASS: $NAMECHEAP_DDNS_PASSWORD
-  #    DOMAIN: cobertos.dev
-  #    INTERVAL: 10s
-  namecheap-ddns-b4t-to:
-    image: joshuamorris3/namecheap-ddns-update
-    container_name: namecheap-ddns-b4t-to
+  cloudflare-ddns-b4t-to:
+    image: oznu/cloudflare-ddns
+    container_name: cloudflare-ddns-b4t-to
     environment:
-      NC_DDNS_PASS: '${NAMECHEAP_DDNS_B4T_TO_PASSWORD}'
-      DOMAIN: 'b4t.to'
-      SUBDOMAINS: '*,@'
-      INTERVAL: '10s'
+      API_KEY: '${CLOUDFLARE_DDNS_B4T_TO_API_KEY}'
+      ZONE: 'b4t.to'
 
 networks:
   traefik-proxy:
@@ -429,6 +460,8 @@ networks:
   seafile-internal:
     internal: true
   statping-internal:
+    internal: true
+  freshrss-internal:
     internal: true
   miniflux-internal:
     internal: true

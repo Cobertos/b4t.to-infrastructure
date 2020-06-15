@@ -9,7 +9,7 @@ My home server, maintained with Docker Compose!
 
 #### Private
 * [seafile](seafile.b4t.to) - Dropbox replacement with way better configs for ignoring files
-* [miniflux](miniflux.b4t.to) - RSS feed reader
+* [freshrss](freshrss.b4t.to) - RSS feed reader
 * [duplicati](duplicati.b4t.to) - Backups
 * [wireguard](b4t.to:51820) - VPN
 
@@ -17,7 +17,7 @@ My home server, maintained with Docker Compose!
 * [icecast](icecast.b4t.to) - The icecast server for streaming from mopidy
 * [portainer](portainer.b4t.to) - Container management and monitoring
 * [traefik](traefik.b4t.to) - Reverse proxy for all HTTP, manages all HTTPS and subdomain routing
-* namecheap-ddns - Syncs dynamic IP to the A records on namecheap
+* cloudflare-ddns - Syncs dynamic IP to the A records on cloudflare
 
 ## TODO - (add link to Notion.so list)
 * Configure backups

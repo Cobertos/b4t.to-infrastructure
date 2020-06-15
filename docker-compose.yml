@@ -3,6 +3,8 @@
 # TODO: Add restarts label to everyone
 # TODO: Setup email where service supports it (like seafile)
 # TODO: Setup all logging collection
+# TODO: All healthchecks
+# https://docs.docker.com/compose/compose-file/#healthcheck
 
 # Please pass in the following variables
 # $EMAIL - Email for Traefik
@@ -21,7 +23,8 @@
 
 # $PORTAINER_HTPASSWD - The portainer admin password, without the username: part
 
-# $SFTP_COBERTOS_PASSWORD - The SFTP account password for cobertos
+# $DUPLICATI_GMAIL_EMAIL - User name for sending gmail notifications from duplicati
+# $DUPLICATI_GMAIL_PASSWORD - Password for sending gmail notifications from duplicat
 
 # $CLOUDFLARE_DDNS_B4T_TO_API_KEY - The API key for Cloudflare DDNS editting for b4t.to
 #                                   Needs Zone:Zone:Read and Zone:DNS:Edit
@@ -148,7 +151,7 @@ services:
       - "traefik.http.routers.seafile.rule=Host(`seafile.b4t.to`)"
       - "traefik.http.routers.seafile.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.seafile.tls.domains.main=b4t.to"
-      - "traefik.http.routers.seafile.tls.domains.sans=['*.b4t.to']"
+      - "traefik.http.routers.seafile.tls.domains.sans=*.b4t.to"
       - "traefik.http.routers.seafile.middlewares=compress"
 
   # TODO:MAke a separate password
@@ -264,24 +267,51 @@ services:
       - "traefik.http.routers.freshrss.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.freshrss.middlewares=compress"
 
-  # TODO: Rwquires that you login off of a localhost domain
-  # before you can actually do anything :/. Traefik does not play
-  # nicely with this
-#  duplicati:
-#    image: duplicati/duplicati
-#    container_name: duplicati
+  # Encrypted backup solution
+  # You need to open the dashboard and configure the backup solution. For me this
+  # involved setting up a new bucket in Backblaze B2, adding a new backup for
+  # that new bucket with app key and ID, and telling Duplicati to backup /data-to-backup
+  duplicati:
+    image: duplicati/duplicati
+    container_name: duplicati
 #    ports:
 #      - "8200:8200"
-   # networks:
-   #   - traefik-proxy
-#    volumes:
-#      - "/opt/batto-cave/dupicati:/data"
-   # labels:
-   #   - "traefik.enable=true"
-   #   - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
-   #   - "traefik.http.routers.duplicati.rule=Host(`duplicati.cobertos.dev`) || Host(`duplicati.b4t.to`) || Host(`duplicati.localhost`)"
-   #   - "traefik.http.routers.duplicati.tls.certresolver=cloudflarednsresolver"  
-   #   - "traefik.http.routers.duplicati.middlewares=lan-only,compress"
+    networks:
+      - traefik-proxy
+    volumes:
+      - "/opt/batto-cave/dupicati:/data"
+      - "/opt/batto-cave:/data-to-backup:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+      - "traefik.http.routers.duplicati.rule=Host(`duplicati.b4t.to`)"
+      - "traefik.http.routers.duplicati.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.duplicati.middlewares=lan-only,compress"
+    command:
+      - "/usr/sbin/tini"
+      - "--"
+      - "/usr/bin/duplicati-server"
+      - "--webservice-port=8200"
+      # Without the flag set, you will get a "The host header sent by the client is not allowed"
+      # error. Semicolon separated hostnames, * for everything, always allows IP
+      # address and localhost directly.
+      # It's meant to prevent DNS based attacks (DNS rebinding)
+      - "--webservice-allowed-hostnames=duplicati.b4t.to"
+      # - "--log-level=debug"
+      # TODO: This has to be manually added in duplicati UI after you start the service
+      # Custom configuration for sending mail for backups with Gmail for now
+      # https://forum.duplicati.com/t/how-to-configure-automatic-email-notifications-via-gmail-for-every-backup-job/869
+      # --send-mail-url=smtp://smtp.gmail.com:587/?starttls=when-available
+      # --send-mail-any-operation=true
+      # --send-mail-subject=Duplicati %PARSEDRESULT%, %OPERATIONNAME% report for %backup-name%
+      # --send-mail-to=cobertosrobertos@gmail.com
+      # --send-mail-username=${DUPLICATI_GMAIL_EMAIL}
+      # --send-mail-password=${DUPLICATI_GMAIL_PASSWORD}
+      # --send-mail-from=b4t.to Duplicati <${DUPLICATI_GMAIL_EMAIL}>
+      # --send-mail-level=Warning,Error,Fatal
+      # Only send errors, we should be collecting successes for analysis for logs
+      # later anyway
+      # Gotta turn on unsecure app login as well
 
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local
@@ -346,7 +376,6 @@ services:
       - "./letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     ports:
-      - "22:22"
       - "80:80"
       - "443:443"
       #- "8080:8080"

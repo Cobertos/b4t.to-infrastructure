@@ -5,6 +5,8 @@
 # TODO: Setup all logging collection
 # TODO: All healthchecks
 # https://docs.docker.com/compose/compose-file/#healthcheck
+# TODO: Implement service specfic backup recommendations
+# https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
 
 # Please pass in the following variables
 # $EMAIL - Email for Traefik
@@ -312,6 +314,10 @@ services:
       # Only send errors, we should be collecting successes for analysis for logs
       # later anyway
       # Gotta turn on unsecure app login as well
+
+      # This didn't see to work for my by default, you have to point it
+      # to the Duplicati folder inside the mounted data directory
+      - --server-datafolder=/data/Duplicati
 
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local

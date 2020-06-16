@@ -273,6 +273,9 @@ services:
   # You need to open the dashboard and configure the backup solution. For me this
   # involved setting up a new bucket in Backblaze B2, adding a new backup for
   # that new bucket with app key and ID, and telling Duplicati to backup /data-to-backup
+  # TODO: Mount the tmp folder for more control over it (and preferably don't use the
+  # SSD)
+  # TODO: Fix volume name ;-;
   duplicati:
     image: duplicati/duplicati
     container_name: duplicati

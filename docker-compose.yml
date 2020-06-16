@@ -7,6 +7,7 @@
 # https://docs.docker.com/compose/compose-file/#healthcheck
 # TODO: Implement service specfic backup recommendations
 # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
+# TODO: Find alpines for relevant services
 
 # Please pass in the following variables
 # $EMAIL - Email for Traefik
@@ -70,7 +71,7 @@ services:
       - "traefik.http.services.mopidy.loadbalancer.server.port=6680"
       - "traefik.http.routers.mopidy.rule=Host(`mopidy.b4t.to`)"
       - "traefik.http.routers.mopidy.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.mopidy.middlewares=compress"
+      - "traefik.http.routers.mopidy.middlewares=http-compress"
   icecast:
     build: 
       context: icecast/
@@ -89,7 +90,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.icecast.rule=Host(`icecast.b4t.to`)"
       - "traefik.http.routers.icecast.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.icecast.middlewares=lan-only,compress"
+      - "traefik.http.routers.icecast.middlewares=lan-only,https-redirect,http-compress"
 
   # Seafile - Dropbox replacement
   # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
@@ -127,9 +128,12 @@ services:
     volumes:
       - /opt/batto-cave/seafile-data:/shared
    # ports:
-    # None of these actually need to be exposed because
-    # Nginx will hook them all up inside this container
-    # (see TODO at top of seafile section)
+   # None of these actually need to be exposed because
+   # Nginx will hook them all up inside this container
+   # (see TODO at top of seafile section)
+   # So if you're putting traefik in front of the seafileltd container
+   # you're actually pointing to NGinx which proxies to the original
+   # services...
    #  - "80:80"
    #  - "443:443"
    #  - "8000:8000" #
@@ -150,11 +154,23 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.seafile.loadbalancer.server.port=80"
+      - "traefik.http.routers.seafile.entrypoints=https"
       - "traefik.http.routers.seafile.rule=Host(`seafile.b4t.to`)"
+      - "traefik.http.routers.seafile.service=seafile"
       - "traefik.http.routers.seafile.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.seafile.tls.domains.main=b4t.to"
-      - "traefik.http.routers.seafile.tls.domains.sans=*.b4t.to"
-      - "traefik.http.routers.seafile.middlewares=compress"
+      # - "traefik.http.routers.seafile.tls.domains.main=b4t.to"
+      # - "traefik.http.routers.seafile.tls.domains.sans=*.b4t.to"
+      - "traefik.http.routers.seafile.middlewares=http-compress"
+      # Separately define without TLS rule above so that we can listen on HTTP
+      # (traefik will stop listening when you define it)
+      # Needs to have higher priority than https redirect catchall rule (priority
+      # ~22 based on rule length)
+      - "traefik.http.services.seafile-http.loadbalancer.server.port=80"
+      - "traefik.http.routers.seafile-http.entrypoints=http"
+      - "traefik.http.routers.seafile-http.priority=100"
+      - "traefik.http.routers.seafile-http.service=seafile-http"
+      - "traefik.http.routers.seafile-http.rule=Host(`seafile.b4t.to`)"
+      - "traefik.http.routers.seafile-http.middlewares=http-compress"
 
   # TODO:MAke a separate password
   statping-db:
@@ -191,7 +207,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.statping.rule=Host(`statping.b4t.to`)"
       - "traefik.http.routers.statping.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.statping.middlewares=compress"
+      - "traefik.http.routers.statping.middlewares=https-redirect,http-compress"
 
   portainer:
     image: portainer/portainer:latest
@@ -212,7 +228,7 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
       - "traefik.http.routers.portainer.rule=Host(`portainer.b4t.to`)"
       - "traefik.http.routers.portainer.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.portainer.middlewares=lan-only,compress"
+      - "traefik.http.routers.portainer.middlewares=lan-only,https-redirect,http-compress"
 
   # Uses PHP, memcached and apache under the hood
   rss-bridge:
@@ -230,7 +246,7 @@ services:
       - "traefik.http.services.rss-bridge.loadbalancer.server.port=80"
       - "traefik.http.routers.rss-bridge.rule=Host(`rss-bridge.b4t.to`)"
       - "traefik.http.routers.rss-bridge.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.rss-bridge.middlewares=compress"
+      - "traefik.http.routers.rss-bridge.middlewares=https-redirect,http-compress"
 
   # Fresh RSS
   freshrss-db:
@@ -267,7 +283,7 @@ services:
       - "traefik.http.services.freshrss.loadbalancer.server.port=80"
       - "traefik.http.routers.freshrss.rule=Host(`freshrss.b4t.to`)"
       - "traefik.http.routers.freshrss.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.freshrss.middlewares=compress"
+      - "traefik.http.routers.freshrss.middlewares=https-redirect,http-compress"
 
   # Encrypted backup solution
   # You need to open the dashboard and configure the backup solution. For me this
@@ -291,7 +307,7 @@ services:
       - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
       - "traefik.http.routers.duplicati.rule=Host(`duplicati.b4t.to`)"
       - "traefik.http.routers.duplicati.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.duplicati.middlewares=lan-only,compress"
+      - "traefik.http.routers.duplicati.middlewares=lan-only,https-redirect,http-compress"
     command:
       - "/usr/sbin/tini"
       - "--"
@@ -380,6 +396,8 @@ services:
       - "--entrypoints.http.address=:80"
       - "--entrypoints.https.address=:443"
 
+      - "--certificatesresolvers.cloudflarednsresolver.acme.email=cobertosrobertos@gmail.com"
+      - "--certificatesresolvers.cloudflarednsresolver.acme.storage=acme.json"
       - "--certificatesresolvers.cloudflarednsresolver.acme.dnschallenge.provider=cloudflare"
     volumes:
       - "./letsencrypt:/letsencrypt"
@@ -387,7 +405,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      #- "8080:8080"
     environment:
       CF_DNS_API_TOKEN: '${CLOUDFLARE_DDNS_B4T_TO_API_KEY}'
     networks:
@@ -398,12 +415,12 @@ services:
       # LAN IP only
       - "traefik.http.middlewares.lan-only.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.0.0/24"
       # Gzip
-      - "traefik.http.middlewares.compress.compress=true"
+      - "traefik.http.middlewares.http-compress.compress=true"
       # Basic auth
       - "traefik.http.middlewares.auth.basicauth.users=$TRAEFIK_HTPASSWD"
       # https redirect
-      - "traefik.http.middlewares.https_redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
       # Security - TODO: More research on a couple of these, like stsSeconds
       # https://github.com/Holi0317/homeserver-compose/blob/master/traefik/build/config/middlewares.toml
       #- "traefik.http.middlewares.secure_head.headers.accessControlAllowOrigin=null"
@@ -417,14 +434,14 @@ services:
       #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.X-Powered-By=null"
       
       # Global redirect all http to https
-      - "traefik.http.routers.http_catchall.rule=HostRegexp(`{any:.+}`)"
-      - "traefik.http.routers.http_catchall.entrypoints=http"
-      - "traefik.http.routers.http_catchall.middlewares=https_redirect"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{any:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=http"
+      - "traefik.http.routers.http-catchall.middlewares=https-redirect"
 
       # == Traefik Dashboard config (traefik-ception) ==
       - "traefik.http.routers.api.rule=Host(`traefik.b4t.to`) || Host(`traefik.localhost`)"
       - "traefik.http.routers.api.service=api@internal"
-      - "traefik.http.routers.api.middlewares=lan-only,auth"
+      - "traefik.http.routers.api.middlewares=lan-only,https-redirect,auth"
 
   cloudflare-ddns-b4t-to:
     image: oznu/cloudflare-ddns

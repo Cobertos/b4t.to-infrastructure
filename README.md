@@ -18,7 +18,3 @@ My home server, maintained with Docker Compose!
 * [portainer](https://portainer.b4t.to) - Container management and monitoring
 * [traefik](https://traefik.b4t.to) - Reverse proxy for all HTTP, manages all HTTPS and subdomain routing
 * cloudflare-ddns - Syncs dynamic IP to the A records on cloudflare
-
-## TODO - (add link to Notion.so list)
-* Configure backups
-* Configure statping

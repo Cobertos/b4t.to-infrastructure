@@ -90,7 +90,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.icecast.rule=Host(`icecast.b4t.to`)"
       - "traefik.http.routers.icecast.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.icecast.middlewares=lan-only,https-redirect,http-compress"
+      - "traefik.http.routers.icecast.middlewares=lan-only,http-compress"
 
   # Seafile - Dropbox replacement
   # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
@@ -207,7 +207,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.statping.rule=Host(`statping.b4t.to`)"
       - "traefik.http.routers.statping.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.statping.middlewares=https-redirect,http-compress"
+      - "traefik.http.routers.statping.middlewares=http-compress"
 
   portainer:
     image: portainer/portainer:latest
@@ -228,7 +228,7 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
       - "traefik.http.routers.portainer.rule=Host(`portainer.b4t.to`)"
       - "traefik.http.routers.portainer.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.portainer.middlewares=lan-only,https-redirect,http-compress"
+      - "traefik.http.routers.portainer.middlewares=lan-only,http-compress"
 
   # Uses PHP, memcached and apache under the hood
   rss-bridge:
@@ -246,7 +246,7 @@ services:
       - "traefik.http.services.rss-bridge.loadbalancer.server.port=80"
       - "traefik.http.routers.rss-bridge.rule=Host(`rss-bridge.b4t.to`)"
       - "traefik.http.routers.rss-bridge.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.rss-bridge.middlewares=https-redirect,http-compress"
+      - "traefik.http.routers.rss-bridge.middlewares=http-compress"
 
   # Fresh RSS
   freshrss-db:
@@ -283,7 +283,7 @@ services:
       - "traefik.http.services.freshrss.loadbalancer.server.port=80"
       - "traefik.http.routers.freshrss.rule=Host(`freshrss.b4t.to`)"
       - "traefik.http.routers.freshrss.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.freshrss.middlewares=https-redirect,http-compress"
+      - "traefik.http.routers.freshrss.middlewares=http-compress"
 
   # Encrypted backup solution
   # You need to open the dashboard and configure the backup solution. For me this
@@ -307,7 +307,7 @@ services:
       - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
       - "traefik.http.routers.duplicati.rule=Host(`duplicati.b4t.to`)"
       - "traefik.http.routers.duplicati.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.duplicati.middlewares=lan-only,https-redirect,http-compress"
+      - "traefik.http.routers.duplicati.middlewares=lan-only,http-compress"
     command:
       - "/usr/sbin/tini"
       - "--"
@@ -372,6 +372,9 @@ services:
   # TODO: Split this into multiple files or something... this is getting bad...
   # TODO: Specify the TLS ciphers explicitly?
   # https://github.com/Holi0317/homeserver-compose/blob/master/traefik/build/config/tls.toml
+  # If you're ever having trouble with certificates, make sure you're using the staging
+  # CA to debug. Also you can delete part or all of the acme.json file and then restart
+  # traefik to get certificates to regenerate manually
   traefik:
     image: traefik:v2.2
     container_name: traefik
@@ -380,7 +383,7 @@ services:
       #   - ./traefik/traefik.yml:/etc/traefik/traefik.yml
       # but ehhhh, I'll do that if this really becomes unweildy
 
-      # - "--log.level=DEBUG"
+      - "--log.level=DEBUG"
 
       # Turn on dashboard, configured to use Basic Auth in this contains labels
       # https://docs.traefik.io/operations/dashboard/#secure-mode
@@ -397,10 +400,12 @@ services:
       - "--entrypoints.https.address=:443"
 
       - "--certificatesresolvers.cloudflarednsresolver.acme.email=cobertosrobertos@gmail.com"
-      - "--certificatesresolvers.cloudflarednsresolver.acme.storage=acme.json"
+      - "--certificatesresolvers.cloudflarednsresolver.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.cloudflarednsresolver.acme.caServer=https://acme-v02.api.letsencrypt.org/directory"
+      # - "--certificatesresolvers.cloudflarednsresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory"
       - "--certificatesresolvers.cloudflarednsresolver.acme.dnschallenge.provider=cloudflare"
     volumes:
-      - "./letsencrypt:/letsencrypt"
+      - "/opt/batto-cave/traefik:/data"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     ports:
       - "80:80"
@@ -441,7 +446,7 @@ services:
       # == Traefik Dashboard config (traefik-ception) ==
       - "traefik.http.routers.api.rule=Host(`traefik.b4t.to`) || Host(`traefik.localhost`)"
       - "traefik.http.routers.api.service=api@internal"
-      - "traefik.http.routers.api.middlewares=lan-only,https-redirect,auth"
+      - "traefik.http.routers.api.middlewares=lan-only,auth"
 
   cloudflare-ddns-b4t-to:
     image: oznu/cloudflare-ddns

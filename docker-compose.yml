@@ -106,7 +106,7 @@ services:
   # https://forum.seafile.com/t/avatar-in-share-dialog-missing/4179/15
   seafile-db:
     image: mariadb:10.1
-    container_name: seafile-mysql
+    container_name: seafile-db
     environment:
       MYSQL_ROOT_PASSWORD: "$SEAFILE_MYSQL_PASSWORD"
       MYSQL_LOG_CONSOLE: "true"
@@ -114,6 +114,12 @@ services:
       - /opt/batto-cave/seafile-mysql/db:/var/lib/mysql
     networks:
       - seafile-internal
+    healthcheck:
+      # Perform a select to check health
+      test: ["CMD", "mysql", "--user=root", "--password=$SEAFILE_MYSQL_PASSWORD", "--execute=select 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
 
   seafile-memcached:
     image: memcached:1.5.6
@@ -184,6 +190,11 @@ services:
       POSTGRES_PASSWORD: $SEAFILE_MYSQL_PASSWORD
       POSTGRES_USER: statping
       POSTGRES_DB: statping
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U statping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   statping:
     image: statping/statping
@@ -258,9 +269,14 @@ services:
     volumes:
       - /opt/batto-cave/freshrss-data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=freshrss
-      - POSTGRES_PASSWORD=freshrss
-      - POSTGRES_DB=freshrss
+      POSTGRES_USER: freshrss
+      POSTGRES_PASSWORD: freshrss
+      POSTGRES_DB: freshrss
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U freshrss"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   freshrss:
     image: freshrss/freshrss

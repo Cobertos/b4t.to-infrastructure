@@ -464,6 +464,49 @@ services:
       - "traefik.http.routers.api.service=api@internal"
       - "traefik.http.routers.api.middlewares=lan-only,auth"
 
+  # TODO: Change the password
+  # firefly-db:
+  #   image: mariadb:10.1
+  #   container_name: firefly-db
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: "a09dh3njfhsekdjhf"
+  #     MYSQL_LOG_CONSOLE: "true"
+  #   volumes:
+  #     - /opt/batto-cave/seafile-mysql/db:/var/lib/mysql
+  #   networks:
+  #     - seafile-internal
+  #   healthcheck:
+  #     # Perform a select to check health
+  #     test: ["CMD", "mysql", "--user=root", "--password=$SEAFILE_MYSQL_PASSWORD", "--execute=select 1"]
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 3
+
+  # firefly-test:
+  #   image: jc5x/firefly-iii:latest
+  #   container_name: firefly-test
+  #   environment:
+  #     APP_KEY: sokLa.mF2*suj2p[nNmbzqgwtd@DKkLq
+  #     DB_HOST: 
+  #     DB_PORT: 
+  #     DB_DATABASE: firefly
+  #     DB_USERNAME: root
+  #     DB_PASSWORD: a09dh3njfhsekdjhf
+  #   -v firefly_iii_export:/var/www/firefly-iii/storage/export \
+  #   -v firefly_iii_upload:/var/www/firefly-iii/storage/upload \ 
+  #   -e APP_KEY=CHANGEME_32_CHARS \
+  #   -e DB_HOST=CHANGEME \
+  #   -e DB_PORT=3306 \
+  #   -e DB_DATABASE=firefly \
+  #   -e DB_USERNAME=root \
+  #   -e DB_PASSWORD=CHANGEME \
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.services.firefly.loadbalancer.server.port=80"
+  #     - "traefik.http.routers.firefly.rule=Host(`firefly.b4t.to`)"
+  #     - "traefik.http.routers.firefly.tls.certresolver=cloudflarednsresolver"
+  #     - "traefik.http.routers.firefly.middlewares=lan-only,http-compress"
+
   cloudflare-ddns-b4t-to:
     image: oznu/cloudflare-ddns
     container_name: cloudflare-ddns-b4t-to

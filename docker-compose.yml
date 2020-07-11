@@ -1,9 +1,19 @@
 # Everythings hosted off of b4t.to
 
-# TODO: Add restarts label to everyone
+# Best Practices:
+# restart:always - This will make sure the container restarts when docker daemon
+# restarts or the container exits. Can still stop the container with manual
+# action, doesn't require unless-stopped (that just refers to not restarting the
+# container if stopped after a daemon restart)
+# HEALTHCHECK - Try to make a container healthy/unhealthy based on only the smallest
+# testable unit. You can't do this at the domain level (eg, testing seafile.b4t.to)
+# because traefik filters unhealthy containers...
+
 # TODO: Setup email where service supports it (like seafile)
 # TODO: Setup all logging collection
-# TODO: All healthchecks
+# TODO: Healthchecks
+# * Some containers don't have curl, wget, iwr, or nc and would require custom
+# dockerfile to do...
 # https://docs.docker.com/compose/compose-file/#healthcheck
 # TODO: Implement service specfic backup recommendations
 # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
@@ -41,10 +51,10 @@ services:
   # buffering)
   # TODO: Some of the integrations don't work ;-;
   # TODO: Setup logging and hook up log scanner
-  # TODO: Setup healthchecks
   mopidy:
     image: wernight/mopidy:latest
     container_name: mopidy
+    restart: always
     volumes:
       - ~/Dropbox/Music/NotOnSpotify:/var/lib/mopidy/media:ro #Local media files
       - /opt/batto-cave/mopidy-data:/var/lib/mopidy/local     #Local configurations
@@ -76,6 +86,7 @@ services:
     build: 
       context: icecast/
     container_name: icecast
+    restart: always
     # ports:
     #  - 8000:8000 #Default icecast
     environment:
@@ -107,6 +118,7 @@ services:
   seafile-db:
     image: mariadb:10.1
     container_name: seafile-db
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: "$SEAFILE_MYSQL_PASSWORD"
       MYSQL_LOG_CONSOLE: "true"
@@ -124,6 +136,7 @@ services:
   seafile-memcached:
     image: memcached:1.5.6
     container_name: seafile-memcached
+    restart: always
     entrypoint: memcached -m 256
     networks:
       - seafile-internal
@@ -131,6 +144,7 @@ services:
   seafile:
     image: seafileltd/seafile-mc:latest
     container_name: seafile
+    restart: always
     volumes:
       - /opt/batto-cave/seafile-data:/shared
    # ports:
@@ -177,11 +191,17 @@ services:
       - "traefik.http.routers.seafile-http.service=seafile-http"
       - "traefik.http.routers.seafile-http.rule=Host(`seafile.b4t.to`)"
       - "traefik.http.routers.seafile-http.middlewares=http-compress"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # TODO:MAke a separate password
   statping-db:
     image: postgres:10
     container_name: statping-db
+    restart: always
     networks:
       - statping-internal
     volumes:
@@ -199,6 +219,7 @@ services:
   statping:
     image: statping/statping
     container_name: statping
+    restart: always
     volumes:
       - /opt/batto-cave/statping:/app
     depends_on:
@@ -223,6 +244,7 @@ services:
   portainer:
     image: portainer/portainer:latest
     container_name: portainer
+    restart: always
     networks:
       - traefik-proxy
     # ports:
@@ -245,7 +267,7 @@ services:
   rss-bridge:
     image: rssbridge/rss-bridge:latest
     container_name: rss-bridge
-    restart: unless-stopped
+    restart: always
     networks:
       - traefik-proxy
     volumes:
@@ -262,7 +284,7 @@ services:
   # Fresh RSS
   freshrss-db:
     image: postgres
-    restart: unless-stopped
+    restart: always
     container_name: freshrss-db
     networks:
       - freshrss-internal
@@ -280,7 +302,7 @@ services:
 
   freshrss:
     image: freshrss/freshrss
-    restart: unless-stopped
+    restart: always
     networks:
       - freshrss-internal
       - traefik-proxy
@@ -307,10 +329,11 @@ services:
   # that new bucket with app key and ID, and telling Duplicati to backup /data-to-backup
   # TODO: Mount the tmp folder for more control over it (and preferably don't use the
   # SSD)
-  # TODO: Fix volume name ;-;
+  # TODO: Fix volume name ;-; (dupicati)
   duplicati:
     image: duplicati/duplicati
     container_name: duplicati
+    restart: always
 #    ports:
 #      - "8200:8200"
     networks:
@@ -353,6 +376,12 @@ services:
       # This didn't see to work for my by default, you have to point it
       # to the Duplicati folder inside the mounted data directory
       - --server-datafolder=/data/Duplicati
+    healthcheck:
+      #lan-only, just check locally
+      test: ["CMD", "curl", "--fail", "localhost:8200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local
@@ -362,6 +391,7 @@ services:
   # https://www.stavros.io/posts/how-to-configure-wireguard/
   wireguard:
     image: linuxserver/wireguard
+    restart: always
     container_name: wireguard
     cap_add:
       - NET_ADMIN
@@ -382,7 +412,6 @@ services:
       - 51820:51820/udp
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
-    restart: unless-stopped
 
   # Networking
   # TODO: Split this into multiple files or something... this is getting bad...
@@ -394,6 +423,7 @@ services:
   traefik:
     image: traefik:v2.2
     container_name: traefik
+    restart: always
     command:
       # I could also use a traefik.yml and mount it to 
       #   - ./traefik/traefik.yml:/etc/traefik/traefik.yml
@@ -467,9 +497,16 @@ services:
   cloudflare-ddns-b4t-to:
     image: oznu/cloudflare-ddns
     container_name: cloudflare-ddns-b4t-to
+    restart: always
     environment:
       API_KEY: '${CLOUDFLARE_DDNS_B4T_TO_API_KEY}'
       ZONE: 'b4t.to'
+    healthcheck:
+      #Check that the DNS resolves to this boxes external IP address
+      test: ["CMD-SHELL", "[ $$(dig +short b4t.to) = $$(dig +short myip.opendns.com @resolver1.opendns.com) ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   traefik-proxy:

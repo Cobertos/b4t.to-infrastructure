@@ -42,6 +42,9 @@
 # $CLOUDFLARE_DDNS_B4T_TO_API_KEY - The API key for Cloudflare DDNS editting for b4t.to
 #                                   Needs Zone:Zone:Read and Zone:DNS:Edit
 
+# $BATTO_SCRIPT_AUTH - Key to authenticate cross container communications via 
+# web services
+
 version: "3.6"
 services:
   # Mopidy + Icecast - My music streaming replacement
@@ -331,7 +334,8 @@ services:
   # SSD)
   # TODO: Fix volume name ;-; (dupicati)
   duplicati:
-    image: duplicati/duplicati
+    build: 
+      context: duplicati/
     container_name: duplicati
     restart: always
 #    ports:
@@ -347,9 +351,11 @@ services:
       - "traefik.http.routers.duplicati.rule=Host(`duplicati.b4t.to`)"
       - "traefik.http.routers.duplicati.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.duplicati.middlewares=lan-only,http-compress"
+    environment:
+      BATTO_SCRIPT_AUTH: "$BATTO_SCRIPT_AUTH"
     command:
-      - "/usr/sbin/tini"
-      - "--"
+      # These get passed to /usr/bin/tini
+      # https://github.com/krallin/tini
       - "/usr/bin/duplicati-server"
       - "--webservice-port=8200"
       # Without the flag set, you will get a "The host header sent by the client is not allowed"
@@ -358,24 +364,25 @@ services:
       # It's meant to prevent DNS based attacks (DNS rebinding)
       - "--webservice-allowed-hostnames=duplicati.b4t.to"
       # - "--log-level=debug"
-      # TODO: This has to be manually added in duplicati UI after you start the service
       # Custom configuration for sending mail for backups with Gmail for now
       # https://forum.duplicati.com/t/how-to-configure-automatic-email-notifications-via-gmail-for-every-backup-job/869
-      # --send-mail-url=smtp://smtp.gmail.com:587/?starttls=when-available
-      # --send-mail-any-operation=true
-      # --send-mail-subject=Duplicati %PARSEDRESULT%, %OPERATIONNAME% report for %backup-name%
-      # --send-mail-to=cobertosrobertos@gmail.com
-      # --send-mail-username=${DUPLICATI_GMAIL_EMAIL}
-      # --send-mail-password=${DUPLICATI_GMAIL_PASSWORD}
-      # --send-mail-from=b4t.to Duplicati <${DUPLICATI_GMAIL_EMAIL}>
-      # --send-mail-level=Warning,Error,Fatal
+      - "--send-mail-url=smtp://smtp.gmail.com:587/?starttls=when-available"
+      - "--send-mail-any-operation=true"
+      - "--send-mail-subject=Duplicati %PARSEDRESULT%, %OPERATIONNAME% report for %backup-name%"
+      - "--send-mail-to=cobertosrobertos@gmail.com"
+      - "--send-mail-username=${DUPLICATI_GMAIL_EMAIL}"
+      - "--send-mail-password=${DUPLICATI_GMAIL_PASSWORD}"
+      - "--send-mail-from=b4t.to Duplicati <${DUPLICATI_GMAIL_EMAIL}>"
+      - "--send-mail-level=Warning,Error,Fatal"
       # Only send errors, we should be collecting successes for analysis for logs
       # later anyway
-      # Gotta turn on unsecure app login as well
 
-      # This didn't see to work for my by default, you have to point it
-      # to the Duplicati folder inside the mounted data directory
-      - --server-datafolder=/data/Duplicati
+      # The default server-datafolder did not work for me. I had to manually point
+      # it do the Duplicati folder in the data directory (contrary to the docs)
+      - "--server-datafolder=/data/Duplicati"
+
+      # We need to run other things before duplicati does it's thing
+      - "--run-script-before-required=/run-before-backup.sh"
     healthcheck:
       #lan-only, just check locally
       test: ["CMD", "curl", "--fail", "localhost:8200"]

@@ -113,11 +113,14 @@ services:
   # https://github.com/haiwen/seafile-docker/issues/86
   # TODO: Get the logs for this as well
   # TODO: seafile bundles nginx as well, and points everything at
-  # that reverse proxy, would be nice to unbundle it? (maybe this is different
-  # in not 2018)
+  # that reverse proxy, would be nice to unbundle it? and let traefik handle it
   # https://forum.seafile.com/t/traefik-reverse-proxy/6142/5
   # TODO: seahub has issues with mixed content because of something with the avatars?
   # https://forum.seafile.com/t/avatar-in-share-dialog-missing/4179/15
+  # TODO: Seafile config is currently in the data directory. It would be nice to put it in here
+  # and version it. Separately I had to configure Seafdav (WebDAV) and seafile
+  # to allow larger uploads in the conf files
+  # https://download.seafile.com/published/seafile-manual/extension/webdav.md
   seafile-db:
     image: mariadb:10.1
     container_name: seafile-db
@@ -342,6 +345,7 @@ services:
 #      - "8200:8200"
     networks:
       - traefik-proxy
+      - batto-svc-internal
     volumes:
       - "/opt/batto-cave/dupicati:/data"
       - "/opt/batto-cave:/data-to-backup:ro"
@@ -515,6 +519,22 @@ services:
       timeout: 10s
       retries: 3
 
+  # Special services that talk to Docker through the socket
+  batto-svc:
+    build:
+      context: batto-svc/
+    container_name: batto-svc
+    restart: always
+    ports:
+      - 7998:7998
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    environment:
+      BATTO_SCRIPT_AUTH: '${BATTO_SCRIPT_AUTH}'
+      SEAFILE_MYSQL_PASSWORD: '${SEAFILE_MYSQL_PASSWORD}'
+    networks:
+      - batto-svc-internal
+
 networks:
   traefik-proxy:
   # Even though Docker will automatically create a bridge network for us, it's
@@ -527,5 +547,7 @@ networks:
   statping-internal:
     internal: true
   freshrss-internal:
+    internal: true
+  batto-svc-internal:
     internal: true
 

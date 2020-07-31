@@ -37,7 +37,7 @@
 # $PORTAINER_HTPASSWD - The portainer admin password, without the username: part
 
 # $DUPLICATI_GMAIL_EMAIL - User name for sending gmail notifications from duplicati
-# $DUPLICATI_GMAIL_PASSWORD - Password for sending gmail notifications from duplicat
+# $DUPLICATI_GMAIL_PASSWORD - Password for sending gmail notifications from duplicati
 
 # $CLOUDFLARE_DDNS_B4T_TO_API_KEY - The API key for Cloudflare DDNS editting for b4t.to
 #                                   Needs Zone:Zone:Read and Zone:DNS:Edit
@@ -336,6 +336,10 @@ services:
   # TODO: Mount the tmp folder for more control over it (and preferably don't use the
   # SSD)
   # TODO: Fix volume name ;-; (dupicati)
+  # TODO: Figure out how to pass in the encryption key
+  # TODO: Figure out how to pass in the backup methods instead of relying
+  # on manual setup (cause it should be able to parameterize) and duplicati
+  # supports CLI)
   duplicati:
     build: 
       context: duplicati/

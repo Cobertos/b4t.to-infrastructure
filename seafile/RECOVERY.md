@@ -6,6 +6,7 @@
  * Note: You can only download to folders mounted to Duplicati, so you'll have to put it in Duplicati's data folder as data-to-backup is read-only for now
 2. Copy all the files to the /opt/batto-cave folder (the seafile-data and seafile-mysql folders)
 3. Point the docker-compose containers at these new folders
+4. It's best to run `/opt/seafile/seafile-server-latest/seaf-fsck.sh` in the Seafile container to fix any issues between the DB and the filesystem. https://seafile.gitbook.io/seafile-server-manual/administration/seafile-fsck
 
 ### If you need to start from a fresh slate of Docker containers
 

@@ -121,6 +121,8 @@ services:
   # and version it. Separately I had to configure Seafdav (WebDAV) and seafile
   # to allow larger uploads in the conf files
   # https://download.seafile.com/published/seafile-manual/extension/webdav.md
+  # You also need to fix the nginx config for webdav in 7.1 seafile
+  # https://forum.seafile.com/t/webdav-not-working-with-nginx-in-front-of-seafile-pro-docker-setup/11696/2
   seafile-db:
     image: mariadb:10.1
     container_name: seafile-db

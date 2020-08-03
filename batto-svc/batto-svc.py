@@ -51,6 +51,13 @@ docker exec seafile-db mysqldump --host=seafile-db --user=root --password='{seaf
 
     return "success"
 
+@bp.route('/ping')
+def ping():
+    """
+    Returns pong
+    """
+    return "pong"
+
 if __name__ == "__main__":
     app = Flask(__name__)
     app.register_blueprint(bp)#, url_prefix="/batto-scripts")
@@ -60,7 +67,7 @@ if __name__ == "__main__":
 
     # Cheroot (Cherrypy webserver) WSGI server. Use for prod
     d = WSGIPathInfoDispatcher({'/': app})
-    server = WSGIServer(('0.0.0.0', 7998), d)
+    server = WSGIServer(('0.0.0.0', 80), d)
     fprint("Starting seafile batto-script server on port 7998")
     try:
         server.start()

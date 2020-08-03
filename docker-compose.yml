@@ -7,7 +7,8 @@
 # container if stopped after a daemon restart)
 # HEALTHCHECK - Try to make a container healthy/unhealthy based on only the smallest
 # testable unit. You can't do this at the domain level (eg, testing seafile.b4t.to)
-# because traefik filters unhealthy containers...
+# because traefik filters unhealthy containers and traefik will never allow it
+# to get to the external if it never comes up as healthy
 
 # TODO: Setup email where service supports it (like seafile)
 # TODO: Setup all logging collection
@@ -123,6 +124,10 @@ services:
   # https://download.seafile.com/published/seafile-manual/extension/webdav.md
   # You also need to fix the nginx config for webdav in 7.1 seafile
   # https://forum.seafile.com/t/webdav-not-working-with-nginx-in-front-of-seafile-pro-docker-setup/11696/2
+  # TODO: Add health check for webdav, but realize that it's using basic HTTP auth
+  # so you'll get a 401 if you just curl it...
+  # TODO: Force https for webdav? Http auth without https will leak the password
+  # which is what webdav uses for seafile...
   seafile-db:
     image: mariadb:10.1
     container_name: seafile-db
@@ -200,7 +205,7 @@ services:
       - "traefik.http.routers.seafile-http.rule=Host(`seafile.b4t.to`)"
       - "traefik.http.routers.seafile-http.middlewares=http-compress"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:80"]
+      test: ["CMD-SHELL", "curl --fail localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -531,8 +536,6 @@ services:
       context: batto-svc/
     container_name: batto-svc
     restart: always
-    ports:
-      - 7998:7998
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     environment:
@@ -540,6 +543,12 @@ services:
       SEAFILE_MYSQL_PASSWORD: '${SEAFILE_MYSQL_PASSWORD}'
     networks:
       - batto-svc-internal
+    healthcheck:
+      #Check that the DNS resolves to this boxes external IP address
+      test: ["CMD-SHELL", "[ $$(curl --fail localhost/ping) = 'pong' ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   traefik-proxy:

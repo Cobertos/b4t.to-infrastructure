@@ -405,6 +405,35 @@ services:
       timeout: 10s
       retries: 3
 
+  # Netdata monitoring
+  netdata:
+    image: netdata/netdata
+    restart: always
+    hostname: nd.b4t.to
+    container_name: netdata
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/os-release:/host/etc/os-release:ro
+    environment:
+      DOCKER_HOST: docker-socket-proxy:2375
+    networks:
+      - traefik-proxy
+      - docker-socket-proxy-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.netdata.loadbalancer.server.port=19999"
+      - "traefik.http.routers.netdata.rule=Host(`nd.b4t.to`)"
+      - "traefik.http.routers.netdata.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.netdata.middlewares=http-compress"
+
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local
   # network to the AllowedIPs, add a suffix to the Address of the peer
@@ -550,6 +579,25 @@ services:
       timeout: 10s
       retries: 3
 
+  # Proxy for docker.sock
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: docker-socket-proxy
+    networks:
+      - docker-socket-proxy-internal
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CONTAINERS=1
+    healthcheck:
+      #Check that the DNS resolves to this boxes external IP address
+      test: ["CMD-SHELL", "wget -q localhost:2375/_ping -O /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    
+
 networks:
   traefik-proxy:
   # Even though Docker will automatically create a bridge network for us, it's
@@ -564,5 +612,7 @@ networks:
   freshrss-internal:
     internal: true
   batto-svc-internal:
+    internal: true
+  docker-socket-proxy-internal:
     internal: true
 

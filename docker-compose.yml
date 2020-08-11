@@ -408,6 +408,9 @@ services:
   # Netdata monitoring
   # Wired up with docker-socket-proxy for container names
   # https://learn.netdata.cloud/docs/agent/packaging/docker#docker-container-names-resolution
+  # TODO: Add collectors for supported services like
+  # web logs (nginx), traefik, uWSGI, DBs (postgres, mariadb), icecast
+  # dockerd (container health stats) 
   netdata:
     image: netdata/netdata
     restart: always

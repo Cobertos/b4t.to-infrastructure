@@ -439,6 +439,21 @@ services:
       - "traefik.http.routers.netdata.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.netdata.middlewares=http-compress"
 
+  # Prometheus
+  prometheus:
+    build: 
+      context: prometheus/
+    restart: always
+    container_name: prometheus
+    networks:
+      - traefik-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.b4t.to`)"
+      - "traefik.http.routers.prometheus.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.prometheus.middlewares=lan-only,http-compress"
+
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local
   # network to the AllowedIPs, add a suffix to the Address of the peer
@@ -506,6 +521,8 @@ services:
       - "--certificatesresolvers.cloudflarednsresolver.acme.caServer=https://acme-v02.api.letsencrypt.org/directory"
       # - "--certificatesresolvers.cloudflarednsresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory"
       - "--certificatesresolvers.cloudflarednsresolver.acme.dnschallenge.provider=cloudflare"
+
+      - "--metrics.prometheus=true"
     volumes:
       - "/opt/batto-cave/traefik:/data"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"

@@ -35,10 +35,10 @@
 
 # $TRAEFIK_HTPASSWD - The Traefik Dashboard Basic Auth Htpasswd
 
-# $PORTAINER_HTPASSWD - The portainer admin password, without the username: part
-
 # $DUPLICATI_GMAIL_EMAIL - User name for sending gmail notifications from duplicati
 # $DUPLICATI_GMAIL_PASSWORD - Password for sending gmail notifications from duplicati
+
+# $GRAFANA_ADMIN_PASSWORD - The admin password for grafana
 
 # $CLOUDFLARE_DDNS_B4T_TO_API_KEY - The API key for Cloudflare DDNS editting for b4t.to
 #                                   Needs Zone:Zone:Read and Zone:DNS:Edit
@@ -254,28 +254,7 @@ services:
       - "traefik.http.routers.statping.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.statping.middlewares=http-compress"
 
-  portainer:
-    image: portainer/portainer:latest
-    container_name: portainer
-    restart: always
-    networks:
-      - traefik-proxy
-    # ports:
-    #   - "8000:8000"
-    #   - "9000:9000" # 9000 has the dashboard
-    command:
-      - "--admin-password=${PORTAINER_HTPASSWD}"
-    volumes:
-      - "/etc/localtime:/etc/localtime:ro" # Sync timezone information
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "/opt/batto-cave/portainer:/data"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.b4t.to`)"
-      - "traefik.http.routers.portainer.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.portainer.middlewares=lan-only,http-compress"
-
+  # TODO: Look into RSS hub instead
   # Uses PHP, memcached and apache under the hood
   rss-bridge:
     image: rssbridge/rss-bridge:latest
@@ -462,6 +441,27 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.b4t.to`)"
       - "traefik.http.routers.prometheus.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.prometheus.middlewares=lan-only,http-compress"
+
+  # Grafana
+  # TODO: Had to manually chown -R 472 /opt/batto-cave/grafana directory
+  # due to permissions errors
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - /opt/batto-cave/grafana:/var/lib/grafana
+      - ./grafana-provisioning/:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=cobertos
+      - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD
+    networks:
+      - traefik-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.b4t.to`)"
+      - "traefik.http.routers.grafana.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.grafana.middlewares=lan-only,http-compress"
 
   # This will require some extra configuration in wg0.conf in the
   # wireguard config. We need to add the subnet for our local

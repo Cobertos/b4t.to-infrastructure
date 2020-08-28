@@ -2,6 +2,12 @@
 
 My home server, maintained with Docker Compose!
 
+## Setup
+
+* `docker-compose up --build -d`
+
+You might need to configure some of the services manually, but eventually all necessary configuration should be in this repo
+
 ## Services
 #### Public
 * [statping](https://statping.b4t.to) - Uptime monitoring

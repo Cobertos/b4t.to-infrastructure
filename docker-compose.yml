@@ -439,6 +439,15 @@ services:
       - "traefik.http.routers.netdata.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.netdata.middlewares=http-compress"
 
+  prometheus-docker-exporter:
+    image: prometheusnet/docker_exporter
+    restart: always
+    container_name: prometheus-docker-exporter
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-proxy
+
   # Prometheus
   prometheus:
     build: 
@@ -618,8 +627,9 @@ services:
       timeout: 10s
       retries: 3
 
-    
-
+# TODO: Set the default network to driver: none, or maybe use the default network
+# as the traefeik proxy? Just make sure to configure it like a normal bridge network
+# TODO: Remove internal: true because it's actually only used for overlay networks
 networks:
   traefik-proxy:
   # Even though Docker will automatically create a bridge network for us, it's

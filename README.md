@@ -9,10 +9,11 @@ My home server, maintained with Docker Compose!
 You might need to configure some of the services manually, but eventually all necessary configuration should be in this repo
 
 ## Services
-### Public
+### Public (personal/non-production grade)
 * [statping](https://statping.b4t.to) - Uptime monitoring
 * [mopidy](https://mopidy.b4t.to) - WIP Mopidy + MPD + Icecast streaming to stream Spotify, YouTube, SoundCloud, and my local files in one service.
 * [netdata](https://nd.b4t.to) - Netdata instance
+* [shieldsio](https://shields.b4t.to) - Shields.io instance
 
 ### Private
 * [seafile](https://seafile.b4t.to) - Dropbox replacement with way better configs for ignoring files

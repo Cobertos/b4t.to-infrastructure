@@ -18,7 +18,9 @@
 # https://docs.docker.com/compose/compose-file/#healthcheck
 # TODO: Implement service specfic backup recommendations
 # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
-# TODO: Find alpines for relevant services
+# TODO: Find alpines for relevant services (or maybe not, there was an argument against it and
+# the stripped down ubuntu being small enough)
+# TODO: Remove 192.168.0.0 lan-only IP or make it dynamic or something, or an env variable?
 
 # Please pass in the following variables
 # $EMAIL - Email for Traefik
@@ -442,6 +444,20 @@ services:
       - "traefik.http.routers.prometheus.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.prometheus.middlewares=lan-only,http-compress"
 
+  # shieldsio/shields
+  shieldsio:
+    image: shieldsio/shields:next
+    restart: always
+    container_name: shieldsio
+    networks:
+      - traefik-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.shieldsio.loadbalancer.server.port=80"
+      - "traefik.http.routers.shieldsio.rule=Host(`shields.b4t.to`)"
+      - "traefik.http.routers.shieldsio.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.shieldsio.middlewares=http-compress"
+
   # Grafana
   # TODO: Had to manually chown -R 472 /opt/batto-cave/grafana directory
   # due to permissions errors
@@ -546,7 +562,7 @@ services:
       - "traefik.enable=true"
       #== Middlewares ==
       # LAN IP only
-      - "traefik.http.middlewares.lan-only.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.0.0/24"
+      - "traefik.http.middlewares.lan-only.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.1.0/24"
       # Gzip
       - "traefik.http.middlewares.http-compress.compress=true"
       # Basic auth

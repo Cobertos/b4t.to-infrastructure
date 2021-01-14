@@ -421,7 +421,8 @@ services:
       - "traefik.http.routers.netdata.middlewares=http-compress"
 
   prometheus-docker-exporter:
-    image: prometheusnet/docker_exporter
+    build: 
+      context: docker_exporter/docker_exporter/
     restart: always
     container_name: prometheus-docker-exporter
     volumes:
@@ -562,7 +563,7 @@ services:
       - "traefik.enable=true"
       #== Middlewares ==
       # LAN IP only
-      - "traefik.http.middlewares.lan-only.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.1.0/24"
+      - "traefik.http.middlewares.lan-only.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.0.0/24, 192.168.1.0/24"
       # Gzip
       - "traefik.http.middlewares.http-compress.compress=true"
       # Basic auth

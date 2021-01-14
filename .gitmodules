@@ -1,0 +1,3 @@
+[submodule "docker_exporter/docker_exporter"]
+	path = docker_exporter/docker_exporter
+	url = https://github.com/Cobertos/docker_exporter.git

@@ -1,0 +1,25 @@
+groups:
+- name: Core
+  rules:
+  - alert: b4t.to not resolving
+    # The healthcheck on the DDNS container makes sure that the IP that DNS resolves
+    # to for b4t.to is the same as our current IP
+    expr: docker_container_health_state{name="cloudflare-ddns-b4t-to"} == 0
+    annotations:
+      summary: The DNS for b4t.to does not match the current external IP assigned by our ISP. Cloudflare DDNS is supposed to handle this through the cloudflare-ddns-b4t-to container
+  - alert: batto-cave Docker exporter down
+    expr: up{instance="prometheus-docker-exporter:9417"} == 0
+    annotations:
+      summary: The Prometheus Docker exporter that provides a lot of high level service information to Prometheus on the main batto-cave box is down.
+
+- name: Seafile
+  rules:
+  - alert: Frontend down
+    expr: docker_container_health_state{name="seafile"} == 0
+  - alert: DB down
+    expr: docker_container_health_state{name="seafile-db"} == 0
+  - alert: 500 Errors in past 5 minutes
+    expr: rate(traefik_service_request_duration_seconds_count{code=~"5.*",service=~"seafile.*"}[5m]) >= 1
+  # TODO: Alerts for
+  # * WebDAV availability
+  # * High latence

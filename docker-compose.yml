@@ -621,7 +621,7 @@ services:
     networks:
       - batto-svc-internal
     healthcheck:
-      #Check that the DNS resolves to this boxes external IP address
+      # Check that the service is accessible (accepts ping endpoint)
       test: ["CMD-SHELL", "[ $$(curl --fail localhost/ping) = 'pong' ]"]
       interval: 30s
       timeout: 10s
@@ -638,7 +638,7 @@ services:
     environment:
       - CONTAINERS=1
     healthcheck:
-      #Check that the DNS resolves to this boxes external IP address
+      # Check that the service is accessible (accepts ping endpoint)
       test: ["CMD-SHELL", "wget -q localhost:2375/_ping -O /dev/null"]
       interval: 30s
       timeout: 10s

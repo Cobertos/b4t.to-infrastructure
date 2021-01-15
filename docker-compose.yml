@@ -450,6 +450,9 @@ services:
     image: shieldsio/shields:next
     restart: always
     container_name: shieldsio
+    environment:
+      METRICS_PROMETHEUS_ENABLED: 'true'
+      METRICS_PROMETHEUS_ENDPOINT_ENABLED: 'true'
     networks:
       - traefik-proxy
     labels:

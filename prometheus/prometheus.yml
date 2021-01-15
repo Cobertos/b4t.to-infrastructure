@@ -47,6 +47,11 @@ scrape_configs:
     static_configs:
       - targets: ['traefik:8080']
 
+  - job_name: 'shieldsio'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['shieldsio:80']
+
   - job_name: 'docker-exporter'
     scrape_interval: 5s
     static_configs:

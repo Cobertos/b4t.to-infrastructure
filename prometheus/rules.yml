@@ -8,7 +8,7 @@ groups:
     annotations:
       summary: The DNS for b4t.to does not match the current external IP assigned by our ISP. Cloudflare DDNS is supposed to handle this through the cloudflare-ddns-b4t-to container
   - alert: batto-cave Docker exporter down
-    expr: up{instance="prometheus-docker-exporter:9417"} == 0
+    expr: up{job="docker-exporter"} == 0
     annotations:
       summary: The Prometheus Docker exporter that provides a lot of high level service information to Prometheus on the main batto-cave box is down.
 
@@ -23,3 +23,12 @@ groups:
   # TODO: Alerts for
   # * WebDAV availability
   # * High latence
+
+- name: Shields
+  rules:
+  - alert: Exporter down
+    expr: up{job="shieldsio"} == 0
+  - alert: 500 Errors in past 5 minutes
+    expr: rate(traefik_service_request_duration_seconds_count{code=~"5.*",service=~"seafile.*"}[5m]) >= 1 # > 1 req/second
+  #- alert: High latency past 5 minutes
+  #  expr: sum(sum_over_time(service_response_millis_bucket{job="shieldsio",le=~"([5-9]\\d{3}|\\d{5})"}[5m])) >= 1 # > 1 request in the past 5 minutes over 5s

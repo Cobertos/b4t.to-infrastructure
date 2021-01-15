@@ -1,0 +1,17 @@
+global:
+  smtp_smarthost: smtp.gmail.com:587
+  smtp_from: __GMAIL_ACCOUNT_USERNAME__
+  smtp_auth_username: __GMAIL_ACCOUNT_USERNAME__
+  smtp_auth_password: __GMAIL_ACCOUNT_PASSWORD__
+  smtp_auth_identity: __GMAIL_ACCOUNT_USERNAME__
+
+route:
+  # Root route,
+  receiver: 'email-me'
+  group_by: ['...'] # TODO: Configure this better in the ftureu https://www.prometheus.io/docs/alerting/latest/configuration/#route
+  repeat_interval: 6h
+
+receivers:
+- name: email-me
+  email_configs:
+  - to: me@cobertos.com

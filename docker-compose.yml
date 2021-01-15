@@ -48,6 +48,10 @@
 # $BATTO_SCRIPT_AUTH - Key to authenticate cross container communications via 
 # web services
 
+# TODO: It'd be nice if these were used for all outgoing gmail (like duplicati)
+# $GMAIL_ACCOUNT_USERNAME - Sets prometheus alertmanager sender from gmail
+# $GMAIL_ACCOUNT_PASSWORD - Sets prometheus alertmanager sender from gmail password
+
 version: "3.6"
 services:
   # Mopidy + Icecast - My music streaming replacement
@@ -444,6 +448,16 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.b4t.to`)"
       - "traefik.http.routers.prometheus.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.prometheus.middlewares=lan-only,http-compress"
+  alertmanager:
+    build:
+      context: prometheus/alertmanager/
+      args:
+        GMAIL_ACCOUNT_USERNAME: $GMAIL_ACCOUNT_USERNAME
+        GMAIL_ACCOUNT_PASSWORD: $GMAIL_ACCOUNT_PASSWORD
+    restart: always
+    container_name: alertmanager
+    networks:
+      - traefik-proxy
 
   # shieldsio/shields
   shieldsio:

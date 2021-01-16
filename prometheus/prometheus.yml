@@ -56,3 +56,11 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       - targets: ['prometheus-docker-exporter:9417']
+
+  - job_name: 'seafile-backups'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['seafile-backups:5572']
+    basic_auth:
+      username: test
+      password: test

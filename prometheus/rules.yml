@@ -23,6 +23,8 @@ groups:
   # TODO: Alerts for
   # * WebDAV availability
   # * High latence
+  - alert: Rclone Prometheus Exporter down
+    expr: up{job="seafile-backups"} == 0
 
 - name: Shields
   rules:

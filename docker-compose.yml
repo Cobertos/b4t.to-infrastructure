@@ -34,6 +34,8 @@
 
 # $SEAFILE_MYSQL_PASSWORD - Just something strong and random
 # $SEAFILE_ADMIN_PASSWORD - Admin account password
+# $SEAFILE_BACKUP_B2_KEY_ID - The key id for the Backblaze B2 access
+# $SEAFILE_BACKUP_B2_KEY - The actual applicationKey in Backblaze B2
 
 # $TRAEFIK_HTPASSWD - The Traefik Dashboard Basic Auth Htpasswd
 
@@ -216,6 +218,53 @@ services:
       timeout: 10s
       retries: 3
 
+  # TODO: document
+  # This can be managed inside the container with `rclone`
+  # TODO: This is lan-only but it should probably still have a better set of auth
+  # for people on the internal network not accessing it...
+  seafile-backups:
+    image: rclone/rclone
+    container_name: rclone
+    restart: always
+    environment:
+      # Configuring without a configuration file (using ENV variables with special
+      # naming)
+      # https://rclone.org/docs/#config-file
+      # https://rclone.org/seafile/
+      RCLONE_CONFIG_BATTOSEAFILE_TYPE: seafile
+      RCLONE_CONFIG_BATTOSEAFILE_URL: https://seafile
+      RCLONE_CONFIG_BATTOSEAFILE_USER: cobertosrobertos@gmail.com
+      # This needs to be the output of `docker container run rclone/rclone obscure [PASSWORD]`
+      RCLONE_CONFIG_BATTOSEAFILE_PASS: $SEAFILE_OBSCURED_PASSWORD
+
+      RCLONE_CONFIG_BATTOB2_TYPE: b2
+      RCLONE_CONFIG_BATTOB2_ACCOUNT: $SEAFILE_BACKUP_B2_KEY_ID
+      RCLONE_CONFIG_BATTOB2_KEY: $SEAFILE_BACKUP_B2_KEY
+    command:
+      - "rcd"
+      - "-vv"
+      - "--rc-web-gui"
+      - "--rc-web-gui-no-open-browser"
+      - "--rc-addr=0.0.0.0:5572"
+      - "--rc-user=test"
+      - "--rc-pass=test"
+      - "--rc-enable-metrics" # For prometheus metrics
+    # volumes:
+    #   - /mnt/ssd/batto-backup:/backup-dest
+    networks:
+      - traefik-proxy
+      - seafile-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.seafile-backups.loadbalancer.server.port=5572"
+      - "traefik.http.routers.seafile-backups.rule=Host(`seafile-backups.b4t.to`)"
+      - "traefik.http.routers.seafile-backups.tls.certresolver=cloudflarednsresolver"
+      # Middleware for adding rclone auth to the request (cause we can't turn it off,
+      # even with --rc-no-auth for some reason...?)
+      # test:test --[base 64]--> dGVzdDp0ZXN0
+      - "traefik.http.middlewares.rclone-satisfy-auth.headers.customrequestheaders.Authorization=Basic dGVzdDp0ZXN0"
+      - "traefik.http.routers.seafile-backups.middlewares=rclone-satisfy-auth,lan-only,http-compress"
+
   # TODO:MAke a separate password
   statping-db:
     image: postgres:10
@@ -328,7 +377,7 @@ services:
   # TODO: Mount the tmp folder for more control over it (and preferably don't use the
   # SSD)
   # TODO: Fix volume name ;-; (dupicati)
-  # TODO: Figure out how to pass in the encryption key
+  # TODO: Figure out how to pass in the encryption key (right now its in BitWarden)
   # TODO: Figure out how to pass in the backup methods instead of relying
   # on manual setup (cause it should be able to parameterize) and duplicati
   # supports CLI)
@@ -448,6 +497,10 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.b4t.to`)"
       - "traefik.http.routers.prometheus.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.prometheus.middlewares=lan-only,http-compress"
+  # TODO: document
+  # This can be managed inside the container with `amtool`
+  # amtool --... http://localhost:9093 alert add asdf To add a test alert, to test
+  # a router...
   alertmanager:
     build:
       context: prometheus/alertmanager/

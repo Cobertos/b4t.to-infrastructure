@@ -63,17 +63,17 @@ services:
     restart: always
     volumes:
       - /opt/batto-cave/seafile-data:/shared
-   # ports:
-   # None of these actually need to be exposed because
-   # Nginx will hook them all up inside this container
-   # (see TODO at top of seafile section)
-   # So if you're putting traefik in front of the seafileltd container
-   # you're actually pointing to NGinx which proxies to the original
-   # services...
-   #  - "80:80"
-   #  - "443:443"
-   #  - "8000:8000" #
-   #  - "8082:8082" #seahub fileserver
+    # ports:
+    # None of these actually need to be exposed because
+    # Nginx will hook them all up inside this container
+    # (see TODO at top of seafile section)
+    # So if you're putting traefik in front of the seafileltd container
+    # you're actually pointing to NGinx which proxies to the original
+    # services...
+    #  - "80:80"
+    #  - "443:443"
+    #  - "8000:8000" #
+    #  - "8082:8082" #seahub fileserver
     environment:
       DB_HOST: seafile-db
       DB_ROOT_PASSWD: "$SEAFILE_MYSQL_PASSWORD"
@@ -146,7 +146,7 @@ services:
       - "--rc-addr=0.0.0.0:5572"
       - "--rc-user=test"
       - "--rc-pass=test"
-      - "--rc-enable-metrics" # For prometheus metrics
+      - "--rc-enable-metrics"  # For prometheus metrics
     volumes:
       - /opt/batto-cave/seafile-mysql/backup:/backup-local-source/db-backup
       - /opt/batto-cave/seafile-data:/backup-local-source/data-backup

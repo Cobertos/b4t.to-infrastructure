@@ -59,11 +59,11 @@ services:
     container_name: mopidy
     restart: always
     volumes:
-      - ~/Dropbox/Music/NotOnSpotify:/var/lib/mopidy/media:ro #Local media files
-      - /opt/batto-cave/mopidy-data:/var/lib/mopidy/local     #Local configurations
+      - ~/Dropbox/Music/NotOnSpotify:/var/lib/mopidy/media:ro  # Local media files
+      - /opt/batto-cave/mopidy-data:/var/lib/mopidy/local      # Local configurations
     ports:
-      - 6600:6600 #MPD server for ncmpcpp
-    #  - 6680:6680 #HTTP server for web client
+      - 6600:6600  # MPD server for ncmpcpp
+    #  - 6680:6680 # HTTP server for web client
     command: >-
       mopidy
       -o "audio/output=lamemp3enc ! shout2send async=false mount=mopidy ip=icecast port=8000 password=$ICECAST_PASSWORD"
@@ -86,7 +86,7 @@ services:
       - "traefik.http.routers.mopidy.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.mopidy.middlewares=http-compress"
   icecast:
-    build: 
+    build:
       context: icecast/
     container_name: icecast
     restart: always
@@ -216,7 +216,7 @@ services:
   # https://learn.netdata.cloud/docs/agent/packaging/docker#docker-container-names-resolution
   # TODO: Add collectors for supported services like
   # web logs (nginx), traefik, uWSGI, DBs (postgres, mariadb), icecast
-  # dockerd (container health stats) 
+  # dockerd (container health stats)
   netdata:
     image: netdata/netdata
     restart: always
@@ -246,7 +246,7 @@ services:
       - "traefik.http.routers.netdata.middlewares=http-compress"
 
   prometheus-docker-exporter:
-    build: 
+    build:
       context: docker_exporter/docker_exporter/
     restart: always
     container_name: prometheus-docker-exporter
@@ -364,7 +364,7 @@ services:
     container_name: traefik
     restart: always
     command:
-      # I could also use a traefik.yml and mount it to 
+      # I could also use a traefik.yml and mount it to
       #   - ./traefik/traefik.yml:/etc/traefik/traefik.yml
       # but ehhhh, I'll do that if this really becomes unweildy
 
@@ -424,7 +424,7 @@ services:
       #- "traefik.http.middlewares.secure_head.headers.framedeny=true"
       #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.Referrer-Policy=no-referrer"
       #- "traefik.http.middlewares.secure_head.headers.customResponseHeaders.X-Powered-By=null"
-      
+
       # Global redirect all http to https
       - "traefik.http.routers.http-catchall.rule=HostRegexp(`{any:.+}`)"
       - "traefik.http.routers.http-catchall.entrypoints=http"
@@ -456,7 +456,7 @@ services:
     networks:
       - docker-socket-proxy-internal
     volumes:
-     - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - CONTAINERS=1
     healthcheck:
@@ -482,4 +482,3 @@ networks:
     internal: true
   docker-socket-proxy-internal:
     internal: true
-

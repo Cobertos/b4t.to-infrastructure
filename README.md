@@ -16,9 +16,7 @@ You might need to configure some of the services manually, but eventually all ne
 * [shieldsio](https://shields.b4t.to) - Shields.io instance
 
 ### Private
-* [seafile](https://seafile.b4t.to) - Dropbox replacement with way better configs for ignoring files
-* [freshrss](https://freshrss.b4t.to) - RSS feed reader
-* [duplicati](https://duplicati.b4t.to) - Backups
+* [seafile](./seafile) - Dropbox replacement with way better configs for ignoring files
 * [wireguard](b4t.to:51820) - VPN
 
 #### Monitoring

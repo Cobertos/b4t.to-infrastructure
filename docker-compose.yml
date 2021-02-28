@@ -32,7 +32,7 @@
 # $SOUNDCLOUD_TOKEN
 # $YOUTUBE_KEY
 
-# $SEAFILE_MYSQL_PASSWORD - Just something strong and random
+# $STATPING_MYSQL_PASSWORD - Just something strong and random
 
 # $TRAEFIK_HTPASSWD - The Traefik Dashboard Basic Auth Htpasswd
 
@@ -116,7 +116,7 @@ services:
     volumes:
       - /opt/batto-cave/statping-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_PASSWORD: $SEAFILE_MYSQL_PASSWORD
+      POSTGRES_PASSWORD: $STATPING_MYSQL_PASSWORD
       POSTGRES_USER: statping
       POSTGRES_DB: statping
     healthcheck:
@@ -137,7 +137,7 @@ services:
       DB_CONN: postgres
       DB_HOST: statping-db
       DB_USER: statping
-      DB_PASS: $SEAFILE_MYSQL_PASSWORD
+      DB_PASS: $STATPING_MYSQL_PASSWORD
       DB_DATABASE: statping
       NAME: "Batto Ping"
       DESCRIPTION: "Keep an eye on all that important shit"
@@ -168,48 +168,6 @@ services:
       - "traefik.http.routers.rss-bridge.rule=Host(`rss-bridge.b4t.to`)"
       - "traefik.http.routers.rss-bridge.tls.certresolver=cloudflarednsresolver"
       - "traefik.http.routers.rss-bridge.middlewares=http-compress"
-
-  # Fresh RSS
-  freshrss-db:
-    image: postgres
-    restart: always
-    container_name: freshrss-db
-    networks:
-      - freshrss-internal
-    volumes:
-      - /opt/batto-cave/freshrss-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: freshrss
-      POSTGRES_PASSWORD: freshrss
-      POSTGRES_DB: freshrss
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U freshrss"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  freshrss:
-    image: freshrss/freshrss
-    restart: always
-    networks:
-      - freshrss-internal
-      - traefik-proxy
-    #ports:
-    #  - "80:80"
-    depends_on:
-      - freshrss-db
-    volumes:
-      - /opt/batto-cave/freshrss-app/data:/var/www/FreshRSS/data
-      - /opt/batto-cave/freshrss-app/extensions:/var/www/FreshRSS/extensions
-    environment:
-      - CRON_MIN=*/20
-      - TZ=America/Detroit
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.freshrss.loadbalancer.server.port=80"
-      - "traefik.http.routers.freshrss.rule=Host(`freshrss.b4t.to`)"
-      - "traefik.http.routers.freshrss.tls.certresolver=cloudflarednsresolver"
-      - "traefik.http.routers.freshrss.middlewares=http-compress"
 
   # Netdata monitoring
   # Wired up with docker-socket-proxy for container names
@@ -477,8 +435,6 @@ networks:
   mopidy-icecast:
     internal: true
   statping-internal:
-    internal: true
-  freshrss-internal:
     internal: true
   docker-socket-proxy-internal:
     internal: true

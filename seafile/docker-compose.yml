@@ -1,0 +1,203 @@
+# $SEAFILE_MYSQL_PASSWORD - Just something strong and random
+# $SEAFILE_ADMIN_PASSWORD - Admin account password
+# $SEAFILE_BACKUP_B2_KEY_ID - The key id for the Backblaze B2 access
+# $SEAFILE_BACKUP_B2_KEY - The actual applicationKey in Backblaze B2
+# $SEAFILE_OBSCURED_PASSWORD -  This needs to be the output of `docker container run rclone/rclone obscure [PASSWORD]`
+# $BATTO_SVC_AUTH - Key to authenticate cross container communications via
+# web services
+
+version: "3.6"
+services:
+  # https://download.seafile.com/published/seafile-manual/docker/deploy%20seafile%20with%20docker.md
+  # TODO: I should come back to this and use gosu to run this stuff as non-root
+  # or use another container that solves this
+  # https://github.com/haiwen/seafile-docker/issues/86
+  # TODO: Get the logs for this as well
+  # TODO: seafile bundles nginx as well, and points everything at
+  # that reverse proxy, would be nice to unbundle it? and let traefik handle it
+  # https://forum.seafile.com/t/traefik-reverse-proxy/6142/5
+  # TODO: seahub has issues with mixed content because of something with the avatars?
+  # (this is why we have the separate http entrypoint for traefik and we overwrite the https
+  # redirect rule middleware)
+  # https://forum.seafile.com/t/avatar-in-share-dialog-missing/4179/15
+  # TODO: Add health check for webdav, but realize that it's using basic HTTP auth
+  # so you'll get a 401 if you just curl it...
+  # TODO: Force https for webdav? Http auth without https will leak the password
+  # which is what webdav uses for seafile...
+  seafile-db:
+    # A MariaDB container
+    build:
+      context: seafile-db/
+    container_name: seafile-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "$SEAFILE_MYSQL_PASSWORD"
+      MYSQL_LOG_CONSOLE: "true"
+      BATTO_SVC_AUTH: '${BATTO_SVC_AUTH}'
+    volumes:
+      - /opt/batto-cave/seafile-mysql/db:/var/lib/mysql
+      - /opt/batto-cave/seafile-mysql/backup:/backup
+    networks:
+      - seafile-internal
+    healthcheck:
+      # Perform a select to check health
+      test: ["CMD", "mysql", "--user=root", "--password=$SEAFILE_MYSQL_PASSWORD", "--execute=select 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
+  # TODO: Is it actually using this? I look at this and it doesn't even look like
+  # this is connected to any of the other containers
+  # TODO: Lol, I don't think it was...
+  # seafile-memcached:
+  #   image: memcached:1.5.6
+  #   container_name: seafile-memcached
+  #   restart: always
+  #   entrypoint: memcached -m 256
+  #   networks:
+  #     - seafile-internal
+
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    restart: always
+    volumes:
+      - /opt/batto-cave/seafile-data:/shared
+   # ports:
+   # None of these actually need to be exposed because
+   # Nginx will hook them all up inside this container
+   # (see TODO at top of seafile section)
+   # So if you're putting traefik in front of the seafileltd container
+   # you're actually pointing to NGinx which proxies to the original
+   # services...
+   #  - "80:80"
+   #  - "443:443"
+   #  - "8000:8000" #
+   #  - "8082:8082" #seahub fileserver
+    environment:
+      DB_HOST: seafile-db
+      DB_ROOT_PASSWD: "$SEAFILE_MYSQL_PASSWORD"
+      TIME_ZONE: America/Detroit
+      SEAFILE_ADMIN_EMAIL: cobertosrobertos@gmail.com
+      SEAFILE_ADMIN_PASSWORD: "$SEAFILE_ADMIN_PASSWORD"
+      SEAFILE_SERVER_LETSENCRYPT: "false"
+    depends_on:
+      - seafile-db
+    #  - seafile-memcached
+    networks:
+      - traefik
+      - seafile-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.seafile.loadbalancer.server.port=80"
+      - "traefik.http.routers.seafile.entrypoints=https"
+      - "traefik.http.routers.seafile.rule=Host(`seafile.b4t.to`)"
+      - "traefik.http.routers.seafile.service=seafile"
+      - "traefik.http.routers.seafile.tls.certresolver=cloudflarednsresolver"
+      # - "traefik.http.routers.seafile.tls.domains.main=b4t.to"
+      # - "traefik.http.routers.seafile.tls.domains.sans=*.b4t.to"
+      - "traefik.http.routers.seafile.middlewares=http-compress"
+      # Separately define without TLS rule above so that we can listen on HTTP
+      # (traefik will stop listening when you define it)
+      # Needs to have higher priority than https redirect catchall rule (priority
+      # ~22 based on rule length)
+      - "traefik.http.services.seafile-http.loadbalancer.server.port=80"
+      - "traefik.http.routers.seafile-http.entrypoints=http"
+      - "traefik.http.routers.seafile-http.priority=100"
+      - "traefik.http.routers.seafile-http.service=seafile-http"
+      - "traefik.http.routers.seafile-http.rule=Host(`seafile.b4t.to`)"
+      - "traefik.http.routers.seafile-http.middlewares=http-compress"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Instance of rclone with the dashboard running
+  # Can also be managed inside of the container with `rclone`
+  # TODO: Add documentation link
+  # TODO: This is lan-only but it should probably still have a better set of auth
+  # for people on the internal network not accessing it...
+  seafile-backups:
+    image: rclone/rclone
+    container_name: seafile-backups
+    restart: always
+    environment:
+      # Configuring without a configuration file (using ENV variables with special
+      # naming)
+      # https://rclone.org/docs/#config-file
+      # https://rclone.org/seafile/
+      RCLONE_CONFIG_BATTOSEAFILE_TYPE: seafile
+      RCLONE_CONFIG_BATTOSEAFILE_URL: https://seafile
+      RCLONE_CONFIG_BATTOSEAFILE_USER: cobertosrobertos@gmail.com
+      # This needs to be the output of `docker container run rclone/rclone obscure [PASSWORD]`
+      RCLONE_CONFIG_BATTOSEAFILE_PASS: $SEAFILE_OBSCURED_PASSWORD
+
+      RCLONE_CONFIG_BATTOB2_TYPE: b2
+      RCLONE_CONFIG_BATTOB2_ACCOUNT: $SEAFILE_BACKUP_B2_KEY_ID
+      RCLONE_CONFIG_BATTOB2_KEY: $SEAFILE_BACKUP_B2_KEY
+    command:
+      # Run rclone daemon, with web-gui. batt-seafile-svc uses the rclone remote control
+      # to schedule backups and such
+      - "rcd"
+      - "-vv"
+      - "--rc-web-gui"
+      - "--rc-web-gui-no-open-browser"
+      - "--rc-addr=0.0.0.0:5572"
+      - "--rc-user=test"
+      - "--rc-pass=test"
+      - "--rc-enable-metrics" # For prometheus metrics
+    volumes:
+      - /opt/batto-cave/seafile-mysql/backup:/backup-local-source/db-backup
+      - /opt/batto-cave/seafile-data:/backup-local-source/data-backup
+      - /mnt/jmicron/batto-backup:/backup-local-dest
+    networks:
+      - traefik
+      #- prometheus
+      - seafile-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.seafile-backups.loadbalancer.server.port=5572"
+      - "traefik.http.routers.seafile-backups.rule=Host(`seafile-backups.b4t.to`)"
+      - "traefik.http.routers.seafile-backups.tls.certresolver=cloudflarednsresolver"
+      # Middleware for adding rclone auth to the request (cause we can't turn basice auth off,
+      # even with --rc-no-auth for some reason...?)
+      # test:test --[base 64]--> dGVzdDp0ZXN0
+      - "traefik.http.middlewares.rclone-satisfy-auth.headers.customrequestheaders.Authorization=Basic dGVzdDp0ZXN0"
+      - "traefik.http.routers.seafile-backups.middlewares=rclone-satisfy-auth,lan-only,http-compress"
+
+  # Service for orchestrating Seafile tasks
+  batto-seafile-svc:
+    build:
+      context: batto-seafile-svc/
+    container_name: batto-seafile-svc
+    restart: always
+    environment:
+      BATTO_SVC_AUTH: '${BATTO_SVC_AUTH}'
+    networks:
+      - traefik
+      #- prometheus
+    healthcheck:
+      # Check that the service is accessible (accepts ping endpoint)
+      test: ["CMD-SHELL", "[ $$(curl --fail localhost/ping) = 'pong' ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# TODO: Set the default network to driver: none, or maybe use the default network
+# as the traefeik proxy? Just make sure to configure it like a normal bridge network
+# TODO: Remove internal: true because it's actually only used for overlay networks
+# TODO: Readd the prometheus network when we break that out, for now prometheus is already on the
+# traefik network
+networks:
+  traefik:
+    external:
+      name: batto-cave_traefik-proxy
+  # prometheus:
+  #   external:
+  #     name: prometheus-net
+  # Even though Docker will automatically create a bridge network for us, it's
+  # better to create one ourselves
+  # https://docs.docker.com/network/bridge/#differences-between-user-defined-bridges-and-the-default-bridge
+  seafile-internal:
+    internal: true

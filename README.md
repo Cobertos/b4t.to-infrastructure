@@ -29,3 +29,7 @@ You might need to configure some of the services manually, but eventually all ne
 * [icecast](https://icecast.b4t.to) - The icecast server for streaming from mopidy
 * [traefik](https://traefik.b4t.to) - Reverse proxy for all HTTP, manages all HTTPS and subdomain routing
 * cloudflare-ddns - Syncs dynamic IP to the A records on cloudflare
+
+#### TODO
+* Add self-hosted analytics service (ShyNet? - https://github.com/milesmcc/shynet , seems to be the most robust of all the self-hosted options, with fallbacks) or maybe (https://github.com/PostHog/posthog)
+* Add OSX Docker container if possible (https://github.com/sickcodes/Docker-OSX )

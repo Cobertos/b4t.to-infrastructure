@@ -1,4 +1,4 @@
-# b4t.to cave
+# b4t.to infrastructure
 
 My home server, maintained with Docker Compose!
 

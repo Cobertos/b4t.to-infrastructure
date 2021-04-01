@@ -1,0 +1,36 @@
+version: "3.6"
+services:
+  searx:
+    image: searx/searx:latest
+    container_name: searx
+    restart: always
+    environment:
+      INSTANCE_NAME: batto searx
+      AUTOCOMPLETE: "google"
+      BASE_URL: https://searx.b4t.to
+      # MORTY_URL: result_proxy.url
+      # MORTY_KEY: result_proxy.key
+      BIND_ADDRESS: "0.0.0.0:8080"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.searx.loadbalancer.server.port=8080"
+      - "traefik.http.routers.searx.rule=Host(`searx.b4t.to`)"
+      - "traefik.http.routers.searx.tls.certresolver=cloudflarednsresolver"
+      - "traefik.http.routers.searx.middlewares=lan-only,http-compress"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# TODO: Set the default network to driver: none, or maybe use the default network
+# as the traefeik proxy? Just make sure to configure it like a normal bridge network
+# TODO: Remove internal: true because it's actually only used for overlay networks
+# TODO: Readd the prometheus network when we break that out, for now prometheus is already on the
+# traefik network
+networks:
+  traefik:
+    external:
+      name: batto-cave_traefik-proxy

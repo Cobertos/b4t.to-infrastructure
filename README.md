@@ -18,6 +18,7 @@ You might need to configure some of the services manually, but eventually all ne
 ### Private
 * [seafile](./seafile) - Dropbox replacement with way better configs for ignoring files
 * [wireguard](b4t.to:51820) - VPN
+* [searx](https://searx.b4t.to) - Searx Instance
 
 #### Monitoring
 * [prometheus](https://prometheus.b4t.to) - Short term metric collection + alerts
